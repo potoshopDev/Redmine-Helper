@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.30)
 project(RedmineHelper VERSION 1.0.0)
 
+include(GoogleTest)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -25,5 +27,16 @@ if (MSVC)
 	set(CMAKE_CXX_FLAGS /experimental:module)
 endif()
 
+
+
 find_package(nlohmann_json REQUIRED)
+find_package(GTest REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
+
+set (TEST_SOURCES test/test.cpp)
+add_executable(${PROJECT_NAME}Test ${TEST_SOURCES})
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Test)
+target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest)
+gtest_discover_tests(${PROJECT_NAME}Test)

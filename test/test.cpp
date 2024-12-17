@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
+#include <json_helper.h>
 
 TEST(Json, InitilizedTest)
 {
@@ -7,9 +7,3 @@ TEST(Json, InitilizedTest)
 	ASSERT_TRUE(json.empty());
 }
 
-int main(int argc, char** argv)
-{
-    testing::InitGoogleTest(&argc, argv);
-    const auto status = RUN_ALL_TESTS();
-    return status;
-}

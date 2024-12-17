@@ -16,11 +16,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set (SOURCES src/main.cpp)
+set (HEADER src/json_helper.h)
 
-source_group("Source files/Source" FILES "scr/main.cpp")
-source_group("Header files/Header" FILES)
+source_group("Source files/Source" FILES ${SOURCE}) 
+source_group("Header files/Header" FILES ${HEADER})
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADER})
 
 if (MSVC)
 	target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
@@ -31,12 +32,13 @@ endif()
 
 find_package(nlohmann_json REQUIRED)
 find_package(GTest REQUIRED)
+find_package(cpr REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json cpr::cpr)
 
 set (TEST_SOURCES test/test.cpp)
 add_executable(${PROJECT_NAME}Test ${TEST_SOURCES})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Test)
-target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest)
+target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest cpr::cpr)
 gtest_discover_tests(${PROJECT_NAME}Test)

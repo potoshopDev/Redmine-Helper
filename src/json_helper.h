@@ -12,6 +12,7 @@ constexpr int HTTP_NOT_FOUND = 404;
 }  // namespace httpCodes
 
 
+
 template <typename T>
 static std::optional<T> parse(const std::string& jsonStr)
 {
@@ -31,7 +32,7 @@ static std::optional<T> parse(const std::string& jsonStr)
     catch (...)
     {
         std::cout << "Something wrong with JSON." << std::endl;
-        std::println("Unknow Error", e.what());
+        std::println("Unknow Error");
     }
 
     return std::nullopt;

@@ -9,6 +9,7 @@
 namespace httpCodes
 {
 	constexpr int HTTP_OK = 200;
+	constexpr int HTTP_POSTOK = 201;
 	constexpr int HTTP_NOT_FOUND = 404;
 }  // namespace httpCodes
 
@@ -68,8 +69,23 @@ struct IssuesList {
 };
 
 
-constexpr const char* REDMINE_URL = "https://qa.fogsoft.ru/issues.json";
+constexpr const char* REDMINE_URL = "https://qa.fogsoft.ru/issues";
 constexpr const char* API_PATH = "API\\API_KEY.txt";
+
+constexpr const char* issue{ "issue" };
+constexpr const char* project_id{ "project_id" };
+constexpr const char* project{ "project" };
+constexpr const char* subject { "subject" };
+constexpr const char* description { "description" };
+constexpr const char* tracker{ "tracker" };
+constexpr const char* tracker_id{ "tracker_id" };
+constexpr const char* status{ "status" };
+constexpr const char* status_id{ "status_id" };
+constexpr const char* priority{ "priority" };
+constexpr const char* priority_id{ "priority_id" };
+constexpr const char* id { "id" };
+
+
 
 std::optional<std::string> loadApiKey(const std::string& filePath)
 {
@@ -98,7 +114,16 @@ std::optional<std::string> getRedmineURL(const std::string& filePath)
 {
 	if (const auto apiKey{ loadApiKey(filePath) })
 	{
-			return REDMINE_URL + std::string("?key=") + apiKey->c_str();
+		return REDMINE_URL + std::string(".json?key=") + apiKey->c_str();
+	}
+	return std::nullopt;
+}
+
+std::optional<std::string> getIssueUrl(const std::string& APIPath, const char* issue_id)
+{
+	if (const auto apiKey{ loadApiKey(APIPath) })
+	{
+		return REDMINE_URL + std::string("/") + issue_id + ".json?key=" + apiKey->c_str() + "&include=attachments";
 	}
 	return std::nullopt;
 }

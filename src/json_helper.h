@@ -9,6 +9,7 @@ namespace httpCodes
 	constexpr int HTTP_OK = 200;
 	constexpr int HTTP_POSTOK = 201;
 	constexpr int HTTP_NOT_FOUND = 404;
+	constexpr int HTTP_NO_CONTENT = 204;
 }  // namespace httpCodes
 
 

@@ -88,9 +88,6 @@ TEST(REDMINE, PARSEISSUE)
 	ASSERT_TRUE(newTaskJson[issue][project_id] == targetProjectIdentifier);
 }
 
-#include <iostream>
-#include <format>
-
 TEST(REDMINE, COPYISSUE)
 {
 	const auto issue_id{ "215488" };

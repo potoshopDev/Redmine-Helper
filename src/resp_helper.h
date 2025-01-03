@@ -35,6 +35,7 @@ constexpr const char* X_Redmine_API_Key{"X-Redmine-API-Key"};
 constexpr const char* Content_Type{"Content-Type"};
 constexpr const char* application_json{"application/json"};
 constexpr const char* content_url{"content_url"};
+constexpr const char* application_octet{ "application/octet-stream" };
 
 
 std::optional<std::string> loadApiKey(const std::string& filePath)
@@ -136,7 +137,7 @@ cpr::Response UploadAttachment(const char* ApiKey, const cpr::Response& fileResp
 		cpr::Url{ REDMINE_URL + std::string("/uploads.json") },
 		cpr::Header{
 			{X_Redmine_API_Key, ApiKey},
-			{Content_Type, application_json}
+			{Content_Type, application_octet}
 		},
 		cpr::Body{ fileResponse.text },
 		cpr::VerifySsl{ false }
@@ -183,19 +184,18 @@ bool CopyAttachment(const nlohmann::json& taskDetails, const char* newTaskId)
 	{
 		const auto fileResponse{ DownloadAttachment(key->c_str(), attachment) };
 		if (fileResponse.status_code != httpCodes::HTTP_OK) {
-			std::cerr << "Ошибка загрузки файла " << attachment[filename].get<std::string>()
-				<< ": " << fileResponse.status_code << std::endl;
-			continue;
+			std::println("Ошибка загрузка файла {}: {}", attachment[filename].get<std::string>(), fileResponse.status_code);
+			return false;
 		}
 
 		const auto uploadResponse{ UploadAttachment(key->c_str(), fileResponse) };
-		if (uploadResponse.status_code != httpCodes::HTTP_POSTOK) {
+		if (uploadResponse.status_code != httpCodes::HTTP_POSTOK ) {
 			std::println("Ошибка загрузки файла на сервер: {}", uploadResponse.status_code);
-			continue;
+			return false;
 		}
 
 		const auto associateFileResponse{ AssociateAttachment(key->c_str(), uploadResponse, attachment, newTaskId) };
-		if (associateFileResponse.status_code != httpCodes::HTTP_OK) {
+		if (associateFileResponse.status_code != httpCodes::HTTP_OK && associateFileResponse.status_code != httpCodes::HTTP_NO_CONTENT) {
 			std::println("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code);
 			return false;
 		}

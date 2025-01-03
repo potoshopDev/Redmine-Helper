@@ -28,13 +28,13 @@ constexpr const char* targetIssueStatusOpen{ "1" };
 
 constexpr const char* attachments{ "attachments" };
 constexpr const char* filename{ "filename" };
-constexpr const char* uploads{"uploads"};
-constexpr const char* token{"token"};
-constexpr const char* upload{"upload"};
-constexpr const char* X_Redmine_API_Key{"X-Redmine-API-Key"};
-constexpr const char* Content_Type{"Content-Type"};
-constexpr const char* application_json{"application/json"};
-constexpr const char* content_url{"content_url"};
+constexpr const char* uploads{ "uploads" };
+constexpr const char* token{ "token" };
+constexpr const char* upload{ "upload" };
+constexpr const char* X_Redmine_API_Key{ "X-Redmine-API-Key" };
+constexpr const char* Content_Type{ "Content-Type" };
+constexpr const char* application_json{ "application/json" };
+constexpr const char* content_url{ "content_url" };
 constexpr const char* application_octet{ "application/octet-stream" };
 
 
@@ -132,7 +132,6 @@ cpr::Response DownloadAttachment(const char* ApiKey, const nlohmann::json& attac
 }
 cpr::Response UploadAttachment(const char* ApiKey, const cpr::Response& fileResponse)
 {
-	// Загружаем файл как временный ресурс к новой задаче
 	auto uploadResponse = cpr::Post(
 		cpr::Url{ REDMINE_URL + std::string("/uploads.json") },
 		cpr::Header{
@@ -147,32 +146,33 @@ cpr::Response UploadAttachment(const char* ApiKey, const cpr::Response& fileResp
 }
 cpr::Response AssociateAttachment(const char* ApiKey, const cpr::Response& uploadResponse, const nlohmann::json& attachment, const char* newTaskId)
 {
-		const auto uploadFileJson = nlohmann::json::parse(uploadResponse.text);
-		nlohmann::json updateAttachments = {
-			{issue, {
-				{uploads, {{
-					{token, uploadFileJson[upload][token]},
-					{filename, attachment[filename]},
-					{description, attachment[description]}
-				}}}
-			}}
-		};
+	const auto uploadFileJson = nlohmann::json::parse(uploadResponse.text);
+	nlohmann::json updateAttachments = {
+		{issue, {
+			{uploads, {{
+				{token, uploadFileJson[upload][token]},
+				{filename, attachment[filename]},
+				{description, attachment[description]}
+			}}}
+		}}
+	};
 
-		const auto upload_url{ std::format("{}/issues/{}.json", REDMINE_URL, newTaskId) };
+	const auto upload_url{ std::format("{}/issues/{}.json", REDMINE_URL, newTaskId) };
 
-		auto associateFileResponse = cpr::Put(
-			cpr::Url{ upload_url },
-			cpr::Header{
-				{X_Redmine_API_Key, ApiKey},
-				{Content_Type, application_json}
-			},
-			cpr::Body{ updateAttachments.dump() },
-			cpr::VerifySsl{ false }
-		);
+	auto associateFileResponse = cpr::Put(
+		cpr::Url{ upload_url },
+		cpr::Header{
+			{X_Redmine_API_Key, ApiKey},
+			{Content_Type, application_json}
+		},
+		cpr::Body{ updateAttachments.dump() },
+		cpr::VerifySsl{ false }
+	);
 
 
-		return associateFileResponse;
+	return associateFileResponse;
 }
+
 
 bool CopyAttachment(const nlohmann::json& taskDetails, const char* newTaskId)
 {
@@ -189,7 +189,7 @@ bool CopyAttachment(const nlohmann::json& taskDetails, const char* newTaskId)
 		}
 
 		const auto uploadResponse{ UploadAttachment(key->c_str(), fileResponse) };
-		if (uploadResponse.status_code != httpCodes::HTTP_POSTOK ) {
+		if (uploadResponse.status_code != httpCodes::HTTP_POSTOK) {
 			std::println("Ошибка загрузки файла на сервер: {}", uploadResponse.status_code);
 			return false;
 		}
@@ -204,3 +204,30 @@ bool CopyAttachment(const nlohmann::json& taskDetails, const char* newTaskId)
 	return true;
 }
 
+std::optional<cpr::Response> AddLinkIssue(const char* FirstIssueId, const char* SecondIssueId)
+{
+	const auto key{ loadApiKey(API_PATH) };
+	if (!key) return std::nullopt;
+
+	nlohmann::json linkTask = {
+		{"relation", {
+			{"issue_to_id", FirstIssueId},
+			{"relation_type", "copied_from"},
+		}}
+	};
+
+	auto link_response = cpr::Post(
+		cpr::Url{ std::format("{}/{}/relations.json",REDMINE_URL_ISSUE, SecondIssueId ) },
+		cpr::VerifySsl{ false },
+		cpr::Header{ {Content_Type, application_json},
+					{X_Redmine_API_Key, key->c_str()} },
+		cpr::Body{ linkTask.dump() }
+	);
+
+	if (link_response.status_code == httpCodes::HTTP_POSTOK)
+	{
+		return link_response;
+	}
+
+	return std::nullopt;
+}

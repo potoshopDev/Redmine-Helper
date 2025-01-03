@@ -91,20 +91,22 @@ TEST(REDMINE, PARSEISSUE)
 TEST(REDMINE, COPYISSUE)
 {
 	const auto issue_id{ "215488" };
-	const auto response{ GetIssue(issue_id) };
+	const auto targetProjectIdentifier{ "508" };
 
+	const auto response{ GetIssue(issue_id) };
 	ASSERT_TRUE(response && response->status_code == httpCodes::HTTP_OK);
 
 	auto sourceTaskJson = nlohmann::json::parse(response->text);
 	auto taskDetails = sourceTaskJson[issue];
-
-	const auto targetProjectIdentifier{ "508" };
 
 	const auto createResponse{ CopyIssue(taskDetails, targetProjectIdentifier) };
 	ASSERT_TRUE(createResponse->status_code == httpCodes::HTTP_POSTOK);
 
 	const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
 	const auto newTaskId = createdTaskJson[issue][id];
+
+	const auto linkResponse{ AddLinkIssue(issue_id, newTaskId.dump().c_str()) };
+	ASSERT_TRUE(linkResponse);
 
 	const auto copyAttachmentResult{ CopyAttachment(taskDetails, newTaskId.dump().c_str()) };
 	ASSERT_TRUE(copyAttachmentResult);

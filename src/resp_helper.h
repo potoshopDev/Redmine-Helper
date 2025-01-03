@@ -26,7 +26,15 @@ constexpr const char* priority_id{ "priority_id" };
 constexpr const char* id{ "id" };
 constexpr const char* targetIssueStatusOpen{ "1" };
 
-
+constexpr const char* attachments{ "attachments" };
+constexpr const char* filename{ "filename" };
+constexpr const char* uploads{"uploads"};
+constexpr const char* token{"token"};
+constexpr const char* upload{"upload"};
+constexpr const char* X_Redmine_API_Key{"X-Redmine-API-Key"};
+constexpr const char* Content_Type{"Content-Type"};
+constexpr const char* application_json{"application/json"};
+constexpr const char* content_url{"content_url"};
 
 
 std::optional<std::string> loadApiKey(const std::string& filePath)
@@ -104,8 +112,8 @@ std::optional<cpr::Response> CopyIssue(const nlohmann::json& taskDetails, const 
 		cpr::Url{ ISSUE_URL_F },
 		cpr::VerifySsl{ false },
 		cpr::Header{
-			{"X-Redmine-API-Key", key->c_str()},
-			{"Content-Type", "application/json"} },
+			{X_Redmine_API_Key, key->c_str()},
+			{Content_Type, application_json} },
 			cpr::Body{ newTaskJson.dump() });
 
 	return createResponse;
@@ -114,8 +122,8 @@ std::optional<cpr::Response> CopyIssue(const nlohmann::json& taskDetails, const 
 cpr::Response DownloadAttachment(const char* ApiKey, const nlohmann::json& attachment_json)
 {
 	const auto fileResponse = cpr::Get(
-		cpr::Url{ attachment_json["content_url"].get<std::string>() },
-		cpr::Header{ {"X-Redmine-API-Key", ApiKey} },
+		cpr::Url{ attachment_json[content_url].get<std::string>() },
+		cpr::Header{ {X_Redmine_API_Key, ApiKey} },
 		cpr::VerifySsl{ false }
 	);
 
@@ -127,8 +135,8 @@ cpr::Response UploadAttachment(const char* ApiKey, const cpr::Response& fileResp
 	auto uploadResponse = cpr::Post(
 		cpr::Url{ REDMINE_URL + std::string("/uploads.json") },
 		cpr::Header{
-			{"X-Redmine-API-Key", ApiKey},
-			{"Content-Type", "application/octet-stream"}
+			{X_Redmine_API_Key, ApiKey},
+			{Content_Type, application_json}
 		},
 		cpr::Body{ fileResponse.text },
 		cpr::VerifySsl{ false }
@@ -140,11 +148,11 @@ cpr::Response AssociateAttachment(const char* ApiKey, const cpr::Response& uploa
 {
 		const auto uploadFileJson = nlohmann::json::parse(uploadResponse.text);
 		nlohmann::json updateAttachments = {
-			{"issue", {
-				{"uploads", {{
-					{"token", uploadFileJson["upload"]["token"]},
-					{"filename", attachment["filename"]},
-					{"description", attachment["description"]}
+			{issue, {
+				{uploads, {{
+					{token, uploadFileJson[upload][token]},
+					{filename, attachment[filename]},
+					{description, attachment[description]}
 				}}}
 			}}
 		};
@@ -154,8 +162,8 @@ cpr::Response AssociateAttachment(const char* ApiKey, const cpr::Response& uploa
 		auto associateFileResponse = cpr::Put(
 			cpr::Url{ upload_url },
 			cpr::Header{
-				{"X-Redmine-API-Key", ApiKey},
-				{"Content-Type", "application/json"}
+				{X_Redmine_API_Key, ApiKey},
+				{Content_Type, application_json}
 			},
 			cpr::Body{ updateAttachments.dump() },
 			cpr::VerifySsl{ false }
@@ -171,11 +179,11 @@ bool CopyAttachment(const nlohmann::json& taskDetails, const char* newTaskId)
 	if (!key) return false;
 
 
-	for (const auto& attachment : taskDetails["attachments"])
+	for (const auto& attachment : taskDetails[attachments])
 	{
 		const auto fileResponse{ DownloadAttachment(key->c_str(), attachment) };
 		if (fileResponse.status_code != httpCodes::HTTP_OK) {
-			std::cerr << "Ошибка загрузки файла " << attachment["filename"].get<std::string>()
+			std::cerr << "Ошибка загрузки файла " << attachment[filename].get<std::string>()
 				<< ": " << fileResponse.status_code << std::endl;
 			continue;
 		}

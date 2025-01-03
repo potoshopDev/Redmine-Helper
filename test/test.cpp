@@ -91,7 +91,7 @@ TEST(REDMINE, PARSEISSUE)
 #include <iostream>
 #include <format>
 
-TEST(REDMINE, CREATEISSUE)
+TEST(REDMINE, COPYISSUE)
 {
 	const auto issue_id{ "215488" };
 	const auto response{ GetIssue(issue_id) };

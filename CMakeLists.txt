@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 project(RedmineHelper VERSION 1.0.0)
 
-include(GoogleTest)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -16,16 +15,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set (SOURCES src/main.cpp)
-set (HEADER src/json_helper.h)
+set (HEADER 
+	src/json_helper.h
+	src/resp_helper.h
+)
 
-source_group("Source files/Source" FILES ${SOURCE}) 
+source_group("Source files/Source" FILES ${SOURCES}) 
 source_group("Header files/Header" FILES ${HEADER})
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADER})
 
 if (MSVC)
 	target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
-	set(CMAKE_CXX_FLAGS /experimental:module)
+	# set(CMAKE_CXX_FLAGS /experimental:module)
 endif()
 
 
@@ -37,9 +39,11 @@ find_package(cpr REQUIRED)
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json cpr::cpr)
 
 set (TEST_SOURCES test/test.cpp)
-set (TEST_HEADER src/json_helper.h)
+set (TEST_HEADER 
+	src/json_helper.h
+	src/resp_helper.h
+)
 add_executable(${PROJECT_NAME}Test ${TEST_SOURCES} ${TEST_HEADER})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Test)
 target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest cpr::cpr)
-gtest_discover_tests(${PROJECT_NAME}Test)

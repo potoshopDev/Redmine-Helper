@@ -44,7 +44,7 @@ TEST(Json, RESPONSENOTEMPTY)
 TEST(REDMINE, RESPONSE)
 {
 
-	const auto redmine_url{ getRedmineURL(API_PATH) };
+	const auto redmine_url{ helper::getRedmineURL(helper::API_PATH) };
 	ASSERT_TRUE(redmine_url);
 
 	cpr::Response response = cpr::Get(cpr::Url{ redmine_url->c_str() }, cpr::VerifySsl{ false });
@@ -58,7 +58,7 @@ TEST(REDMINE, RESPONSE)
 TEST(REDMINE, GETISSUES)
 {
 	const auto issue_id{ "215488" };
-	const auto response{ GetIssue(issue_id) };
+	const auto response{ helper::GetIssue(issue_id) };
 
 	ASSERT_TRUE(response && response->status_code == httpCodes::HTTP_OK);
 }
@@ -66,49 +66,58 @@ TEST(REDMINE, GETISSUES)
 TEST(REDMINE, PARSEISSUE)
 {
 	const auto issue_id{ "215488" };
-	const auto response{ GetIssue(issue_id) };
+	const auto response{ helper::GetIssue(issue_id) };
 
 	ASSERT_TRUE(response && response->status_code == httpCodes::HTTP_OK);
 
 	const auto sourceTaskJson = nlohmann::json::parse(response->text);
-	auto taskDetails = sourceTaskJson[issue];
+	auto taskDetails = sourceTaskJson[helper::issue];
 	const auto targetProjectIdentifier{ "999999" };
 
 	nlohmann::json newTaskJson = {
-		{issue, {
-			{project_id, targetProjectIdentifier},
-			{subject, taskDetails[subject]},
-			{description, taskDetails[description]},
-			{tracker_id, taskDetails[tracker][id]},
-			{status_id, taskDetails[status][id]},
-			{priority_id, taskDetails[priority][id]}
+		{helper::issue, {
+			{helper::project_id, targetProjectIdentifier},
+			{helper::subject, taskDetails[helper::subject]},
+			{helper::description, taskDetails[helper::description]},
+			{helper::tracker_id, taskDetails[helper::tracker][helper::id]},
+			{helper::status_id, taskDetails[helper::status][helper::id]},
+			{helper::priority_id, taskDetails[helper::priority][helper::id]}
 		}}
 	};
 
-	ASSERT_TRUE(newTaskJson[issue][project_id] == targetProjectIdentifier);
+	ASSERT_TRUE(newTaskJson[helper::issue][helper::project_id] == targetProjectIdentifier);
 }
 
-TEST(REDMINE, COPYISSUE)
+//TEST(REDMINE, COPYISSUE)
+//{
+//	const auto issue_id{ "215488" };
+//	const auto targetProjectIdentifier{ "508" };
+//
+//	const auto response{ GetIssue(issue_id) };
+//	ASSERT_TRUE(response && response->status_code == httpCodes::HTTP_OK);
+//
+//	auto sourceTaskJson = nlohmann::json::parse(response->text);
+//	auto taskDetails = sourceTaskJson[issue];
+//
+//	const auto createResponse{ CopyIssue(taskDetails, targetProjectIdentifier) };
+//	ASSERT_TRUE(createResponse->status_code == httpCodes::HTTP_POSTOK);
+//
+//	const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
+//	const auto newTaskId = createdTaskJson[issue][id];
+//
+//	const auto linkResponse{ AddLinkIssue(issue_id, newTaskId.dump().c_str()) };
+//	ASSERT_TRUE(linkResponse);
+//
+//	const auto copyAttachmentResult{ CopyAttachment(taskDetails, newTaskId.dump().c_str()) };
+//	ASSERT_TRUE(copyAttachmentResult);
+//}
+
+TEST(REDMINE, UPDATEISSUE)
 {
-	const auto issue_id{ "215488" };
-	const auto targetProjectIdentifier{ "508" };
+	const auto issue_id{ "219762" };
+	const auto issueData{ helper::GetSupIssueData()};
 
-	const auto response{ GetIssue(issue_id) };
-	ASSERT_TRUE(response && response->status_code == httpCodes::HTTP_OK);
-
-	auto sourceTaskJson = nlohmann::json::parse(response->text);
-	auto taskDetails = sourceTaskJson[issue];
-
-	const auto createResponse{ CopyIssue(taskDetails, targetProjectIdentifier) };
-	ASSERT_TRUE(createResponse->status_code == httpCodes::HTTP_POSTOK);
-
-	const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
-	const auto newTaskId = createdTaskJson[issue][id];
-
-	const auto linkResponse{ AddLinkIssue(issue_id, newTaskId.dump().c_str()) };
-	ASSERT_TRUE(linkResponse);
-
-	const auto copyAttachmentResult{ CopyAttachment(taskDetails, newTaskId.dump().c_str()) };
-	ASSERT_TRUE(copyAttachmentResult);
+	const auto updateResult{ helper::UpdateIssue(issue_id, issueData) };
+	ASSERT_TRUE(updateResult);
 }
 

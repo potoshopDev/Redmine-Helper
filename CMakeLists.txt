@@ -18,6 +18,7 @@ set (SOURCES src/main.cpp)
 set (HEADER 
 	src/json_helper.h
 	src/resp_helper.h
+	src/app_helper.h
 )
 
 source_group("Source files/Source" FILES ${SOURCES}) 
@@ -42,6 +43,7 @@ set (TEST_SOURCES test/test.cpp)
 set (TEST_HEADER 
 	src/json_helper.h
 	src/resp_helper.h
+	src/app_helper.h
 )
 add_executable(${PROJECT_NAME}Test ${TEST_SOURCES} ${TEST_HEADER})
 

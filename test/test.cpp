@@ -88,36 +88,44 @@ TEST(REDMINE, PARSEISSUE)
 	ASSERT_TRUE(newTaskJson[helper::issue][helper::project_id] == targetProjectIdentifier);
 }
 
-//TEST(REDMINE, COPYISSUE)
-//{
-//	const auto issue_id{ "215488" };
-//	const auto targetProjectIdentifier{ "508" };
-//
-//	const auto response{ GetIssue(issue_id) };
-//	ASSERT_TRUE(response && response->status_code == httpCodes::HTTP_OK);
-//
-//	auto sourceTaskJson = nlohmann::json::parse(response->text);
-//	auto taskDetails = sourceTaskJson[issue];
-//
-//	const auto createResponse{ CopyIssue(taskDetails, targetProjectIdentifier) };
-//	ASSERT_TRUE(createResponse->status_code == httpCodes::HTTP_POSTOK);
-//
-//	const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
-//	const auto newTaskId = createdTaskJson[issue][id];
-//
-//	const auto linkResponse{ AddLinkIssue(issue_id, newTaskId.dump().c_str()) };
-//	ASSERT_TRUE(linkResponse);
-//
-//	const auto copyAttachmentResult{ CopyAttachment(taskDetails, newTaskId.dump().c_str()) };
-//	ASSERT_TRUE(copyAttachmentResult);
-//}
-
-TEST(REDMINE, UPDATEISSUE)
+TEST(REDMINE, COPYISSUE)
 {
-	const auto issue_id{ "219762" };
+	const auto issue_id{ "219532" };
+	const auto targetProjectIdentifier{ helper::projectKdev };
+
+	const auto createResponse{ helper::CopyIssue(issue_id, targetProjectIdentifier) };
+	ASSERT_TRUE(createResponse->status_code == httpCodes::HTTP_POSTOK);
+
+	const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
+	const auto newTaskId = createdTaskJson[helper::issue][helper::id];
+
+	const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId.dump().c_str()) };
+	ASSERT_TRUE(linkResponse);
+
+	const auto response{ helper::GetIssue(issue_id) };
+	ASSERT_TRUE(response);
+
+	const auto sourceTaskJson = nlohmann::json::parse(response->text);
+	auto taskDetails = sourceTaskJson[helper::issue];
+
+	const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId.dump().c_str()) };
+	ASSERT_TRUE(copyAttachmentResult);
+}
+
+TEST(REDMINE, UPDATEISSUESUP)
+{
+	const auto issue_id{ "219532" };
 	const auto issueData{ helper::GetSupIssueData()};
 
 	const auto updateResult{ helper::UpdateIssue(issue_id, issueData) };
 	ASSERT_TRUE(updateResult);
 }
 
+TEST(REDMINE, UPDATEISSUEDEV)
+{
+	const auto issue_id{ "219771" };
+	const auto issueData{ helper::GetDevIssueData()};
+
+	const auto updateResult{ helper::UpdateIssue(issue_id, issueData) };
+	ASSERT_TRUE(updateResult);
+}

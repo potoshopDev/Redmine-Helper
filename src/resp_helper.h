@@ -9,6 +9,8 @@
 
 namespace helper
 {
+	std::optional<nlohmann::json> GetCopyIssueData(const char* IssueId, const char* targetProjectIdentifier);
+
 	constexpr const char* REDMINE_URL{ "https://qa.fogsoft.ru" };
 	constexpr const char* REDMINE_URL_ISSUE = "https://qa.fogsoft.ru/issues";
 	constexpr const char* ISSUE_URL_F{ "https://qa.fogsoft.ru/issues.json" };
@@ -39,24 +41,33 @@ namespace helper
 	constexpr const char* content_url{ "content_url" };
 	constexpr const char* application_octet{ "application/octet-stream" };
 	constexpr const char* status_open{ "0" };
+	constexpr const char* status_inprogress{ "2" };
+	constexpr const char* fixed_version_id{ "fixed_version_id" };
+	constexpr const char* sup { "5081" };
 
 	constexpr const char* value{ "value" };
 	constexpr const char* one{ "1" };
 	constexpr const char* zero{ "0" };
 	constexpr const char* empty{ "" };
 	constexpr const char* dogovor{ "Часы по договору сопровождения" };
+	constexpr const char* no_use{ "Не вносить" };
+	constexpr const char* selling_issue{ "Платная задача" };
 	constexpr const char* assigned_to_id{ "assigned_to_id" };
 	constexpr const char* custom_fields{ "custom_fields" };
 	constexpr const char* category_id{ "category_id" };
 	constexpr const char* category{ "category" };
 	constexpr const char* User{ "364" };
+	constexpr const char* User2{ "102" };
 	constexpr const char* selling{ "4578" };
+	constexpr const char* projectKdev{ "600" };
 
 	constexpr const int is_billable{ 8 };
 	constexpr const int is_urgent{ 11 };
 	constexpr const int billable_state{ 13 };
 	constexpr const int price{ 19 };
 	constexpr const int talk_client{ 35 };
+	constexpr const int release_notes{ 51 };
+	constexpr const int finance{ 52 };
 
 
 	std::optional<std::string> loadApiKey(const std::string& filePath)
@@ -114,18 +125,10 @@ namespace helper
 		return std::nullopt;
 	}
 
-	std::optional<cpr::Response> CopyIssue(const nlohmann::json& taskDetails, const char* targetProjectIdentifier)
+	std::optional<cpr::Response> CopyIssue(const char* issue_id, const char* project_id)
 	{
-		nlohmann::json newTaskJson = {
-			{issue, {
-				{project_id, targetProjectIdentifier},
-				{subject, taskDetails[subject]},
-				{description, taskDetails[description]},
-				{tracker_id, taskDetails[tracker][id]},
-				{status_id, targetIssueStatusOpen},
-				{priority_id, taskDetails[priority][id]}
-			}}
-		};
+		const auto newTaskJson{ GetCopyIssueData(issue_id, project_id) };
+		if (!newTaskJson) return std::nullopt;
 
 		const auto key{ loadApiKey(API_PATH) };
 		if (!key) return std::nullopt;
@@ -136,7 +139,7 @@ namespace helper
 			cpr::Header{
 				{X_Redmine_API_Key, key->c_str()},
 				{Content_Type, application_json} },
-				cpr::Body{ newTaskJson.dump() });
+				cpr::Body{ newTaskJson->dump() });
 
 		return createResponse;
 	}
@@ -273,8 +276,6 @@ namespace helper
 
 	nlohmann::json GetSupIssueData()
 	{
-
-
 		nlohmann::json customFields = nlohmann::json::array({
 			{{id, is_billable}, {value, one}},
 			{{id, is_urgent}, {value, zero}},
@@ -284,16 +285,58 @@ namespace helper
 			});
 
 
+
 		const nlohmann::json request_body = {
 				{issue, {
 					{assigned_to_id, User},
 					{custom_fields, customFields},
-					{status_id, status_open},
-					{category_id, selling}
+					{status_id, status_inprogress},
+					{category_id, selling},
+					{fixed_version_id, sup}
 				}}
 		};
 
 		return request_body;
+	}
+
+	nlohmann::json GetDevIssueData()
+	{
+		nlohmann::json customFields = nlohmann::json::array({
+			{{id, release_notes}, {value, no_use}},
+			{{id, finance}, {value, selling_issue}}
+			});
+
+		const nlohmann::json request_body = {
+				{issue, {
+					{assigned_to_id, User2},
+					{custom_fields, customFields},
+					{status_id, status_open},
+				}}
+		};
+
+		return request_body;
+	}
+
+	std::optional<nlohmann::json> GetCopyIssueData(const char* IssueId, const char* targetProjectIdentifier)
+	{
+		const auto response{ helper::GetIssue(IssueId) };
+		if (!response && !response->status_code == httpCodes::HTTP_OK) return std::nullopt;
+
+		const auto sourceTaskJson = nlohmann::json::parse(response->text);
+		const auto taskDetails = sourceTaskJson[helper::issue];
+
+		nlohmann::json newTaskJson = {
+			{issue, {
+				{project_id, targetProjectIdentifier},
+				{subject, taskDetails[subject]},
+				{description, taskDetails[description]},
+				{tracker_id, taskDetails[tracker][id]},
+				{status_id, targetIssueStatusOpen},
+				{priority_id, taskDetails[priority][id]}
+			}}
+		};
+
+		return newTaskJson;
 	}
 
 
@@ -306,13 +349,11 @@ namespace helper
 		const auto sourceTaskJson = nlohmann::json::parse(response->text);
 		auto taskDetails = sourceTaskJson[issue];
 
-
-
 		nlohmann::json newTaskJson = {
 			{issue, {
 				{id, taskDetails[id]},
 				{assigned_to_id, User},
-				{status_id, status_open},
+				{status_id, taskDetails[status][id]},
 				{custom_fields, taskDetails[custom_fields]},
 				{category_id, taskDetails[category][id]}
 		}}

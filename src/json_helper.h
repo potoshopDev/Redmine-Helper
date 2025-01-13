@@ -32,7 +32,6 @@ static std::optional<T> parse(const std::string& jsonStr)
 	}
 	catch (...)
 	{
-		std::cout << "Something wrong with JSON." << std::endl;
 		std::println("Unknow Error");
 	}
 

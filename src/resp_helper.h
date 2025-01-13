@@ -6,6 +6,7 @@
 #include <string>
 #include <print>
 #include <format>
+#include "json_helper.h"
 
 namespace helper
 {
@@ -40,10 +41,10 @@ namespace helper
 	constexpr const char* application_json{ "application/json" };
 	constexpr const char* content_url{ "content_url" };
 	constexpr const char* application_octet{ "application/octet-stream" };
-	constexpr const char* status_open{ "0" };
+	constexpr const char* status_open{ "1" };
 	constexpr const char* status_inprogress{ "2" };
 	constexpr const char* fixed_version_id{ "fixed_version_id" };
-	constexpr const char* sup { "5081" };
+	constexpr const char* sup{ "5081" };
 
 	constexpr const char* value{ "value" };
 	constexpr const char* one{ "1" };
@@ -60,6 +61,7 @@ namespace helper
 	constexpr const char* User2{ "102" };
 	constexpr const char* selling{ "4578" };
 	constexpr const char* projectKdev{ "600" };
+	constexpr const char* projectKsup{ "446" };
 
 	constexpr const int is_billable{ 8 };
 	constexpr const int is_urgent{ 11 };
@@ -360,5 +362,31 @@ namespace helper
 		};
 
 		return newTaskJson;
+	}
+
+	std::optional<std::string> copy(const char* issue_id)
+	{
+
+		const auto targetProjectIdentifier{ helper::projectKdev };
+
+		const auto createResponse{ helper::CopyIssue(issue_id, targetProjectIdentifier) };
+		if (!createResponse) return std::nullopt;
+
+		const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
+		const auto newTaskId = std::to_string(createdTaskJson[helper::issue][helper::id].get<int>());
+
+		const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId.c_str() )};
+		if (!linkResponse) return newTaskId;
+
+		const auto response{ helper::GetIssue(issue_id) };
+		if (!response) return newTaskId;
+
+		const auto sourceTaskJson = nlohmann::json::parse(response->text);
+		auto taskDetails = sourceTaskJson[helper::issue];
+
+		const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId.c_str())};
+		if (!copyAttachmentResult) return newTaskId;
+
+		return newTaskId;
 	}
 }

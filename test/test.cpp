@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <json_helper.h>
 #include "resp_helper.h"
+#include "app_helper.h"
 
 
 struct ChuckResponse
@@ -90,31 +91,13 @@ TEST(REDMINE, PARSEISSUE)
 
 TEST(REDMINE, COPYISSUE)
 {
-	const auto issue_id{ "219532" };
-	const auto targetProjectIdentifier{ helper::projectKdev };
-
-	const auto createResponse{ helper::CopyIssue(issue_id, targetProjectIdentifier) };
-	ASSERT_TRUE(createResponse->status_code == httpCodes::HTTP_POSTOK);
-
-	const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
-	const auto newTaskId = createdTaskJson[helper::issue][helper::id];
-
-	const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId.dump().c_str()) };
-	ASSERT_TRUE(linkResponse);
-
-	const auto response{ helper::GetIssue(issue_id) };
-	ASSERT_TRUE(response);
-
-	const auto sourceTaskJson = nlohmann::json::parse(response->text);
-	auto taskDetails = sourceTaskJson[helper::issue];
-
-	const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId.dump().c_str()) };
-	ASSERT_TRUE(copyAttachmentResult);
+	const auto issue_id{ "219864" };
+	helper::copy(issue_id);
 }
 
 TEST(REDMINE, UPDATEISSUESUP)
 {
-	const auto issue_id{ "219532" };
+	const auto issue_id{ "219864" };
 	const auto issueData{ helper::GetSupIssueData()};
 
 	const auto updateResult{ helper::UpdateIssue(issue_id, issueData) };
@@ -123,9 +106,15 @@ TEST(REDMINE, UPDATEISSUESUP)
 
 TEST(REDMINE, UPDATEISSUEDEV)
 {
-	const auto issue_id{ "219771" };
+	const auto issue_id{ "219866" };
 	const auto issueData{ helper::GetDevIssueData()};
 
 	const auto updateResult{ helper::UpdateIssue(issue_id, issueData) };
 	ASSERT_TRUE(updateResult);
+}
+
+TEST(REDMINE, FINDISSUE)
+{
+	const auto issues{ helper::find_issues(helper::csp_filters) };
+	ASSERT_TRUE(issues);
 }

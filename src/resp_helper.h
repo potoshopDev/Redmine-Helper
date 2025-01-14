@@ -7,15 +7,18 @@
 #include <print>
 #include <format>
 #include "json_helper.h"
+#include <string_view>
 
 namespace helper
 {
 	std::optional<nlohmann::json> GetCopyIssueData(const char* IssueId, const char* targetProjectIdentifier);
+	bool is_key_bad(const std::optional<std::string>& key);
 
 	constexpr const char* REDMINE_URL{ "https://qa.fogsoft.ru" };
 	constexpr const char* REDMINE_URL_ISSUE = "https://qa.fogsoft.ru/issues";
 	constexpr const char* ISSUE_URL_F{ "https://qa.fogsoft.ru/issues.json" };
 	constexpr const char* API_PATH = "API\\API_KEY.txt";
+	constexpr const char* YANDEX_URL = "https://yandex.ru";
 
 	constexpr const char* issue{ "issue" };
 	constexpr const char* project_id{ "project_id" };
@@ -59,6 +62,7 @@ namespace helper
 	constexpr const char* category{ "category" };
 	constexpr const char* User{ "364" };
 	constexpr const char* User2{ "102" };
+	constexpr const char* User3{ "172" };
 	constexpr const char* selling{ "4578" };
 	constexpr const char* projectKdev{ "600" };
 	constexpr const char* projectKsup{ "446" };
@@ -310,7 +314,8 @@ namespace helper
 
 		const nlohmann::json request_body = {
 				{issue, {
-					{assigned_to_id, User2},
+					//{assigned_to_id, User2},
+					{assigned_to_id, User3},
 					{custom_fields, customFields},
 					{status_id, status_open},
 				}}
@@ -375,7 +380,7 @@ namespace helper
 		const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
 		const auto newTaskId = std::to_string(createdTaskJson[helper::issue][helper::id].get<int>());
 
-		const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId.c_str() )};
+		const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId.c_str()) };
 		if (!linkResponse) return newTaskId;
 
 		const auto response{ helper::GetIssue(issue_id) };
@@ -384,9 +389,36 @@ namespace helper
 		const auto sourceTaskJson = nlohmann::json::parse(response->text);
 		auto taskDetails = sourceTaskJson[helper::issue];
 
-		const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId.c_str())};
+		const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId.c_str()) };
 		if (!copyAttachmentResult) return newTaskId;
 
 		return newTaskId;
 	}
+
+	bool check_response(std::string_view URL)
+	{
+		std::print("Проверяю запрос {}...", URL);
+		cpr::Response response = cpr::Get(cpr::Url{ URL }, cpr::VerifySsl{ false });
+		if (response.status_code == httpCodes::HTTP_OK || response.status_code == httpCodes::HTTP_NO_CONTENT)
+		{
+			std::println("OK");
+		}
+		else
+		{
+			std::println("Ошибка. status code: {};", response.status_code);
+			return false;
+		}
+
+		return true;
+	}
+
+	bool is_key_bad(const std::optional<std::string>& key)
+	{
+		if (!key) return true;
+		if (key->empty()) { std::println("Нет ключа в файле!"); return true; }
+
+		return false;
+	}
 }
+
+

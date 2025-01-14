@@ -36,8 +36,9 @@ endif()
 find_package(nlohmann_json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(cpr REQUIRED)
+find_package(tgbot REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json cpr::cpr)
+target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json cpr::cpr tgbot::tgbot)
 
 set (TEST_SOURCES test/test.cpp)
 set (TEST_HEADER 
@@ -48,4 +49,4 @@ set (TEST_HEADER
 add_executable(${PROJECT_NAME}Test ${TEST_SOURCES} ${TEST_HEADER})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Test)
-target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest cpr::cpr)
+target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest cpr::cpr tgbot::tgbot)

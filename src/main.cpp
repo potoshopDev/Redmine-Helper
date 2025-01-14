@@ -5,7 +5,7 @@
 int main()
 {
     std::setlocale(LC_ALL,"Russian");
-	std::println("Запуск каждые 5 мин....");
+	std::println(msg_hlp::run_every_five_minutes);
 
 	helper::Run();
 }

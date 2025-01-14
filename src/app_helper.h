@@ -131,13 +131,13 @@ namespace
 		for (const auto& current_issue : issues_arr)
 		{
 			const auto issueDataSup{ helper::GetSupIssueData() };
-			helper::UpdateIssue(current_issue.c_str(), issueDataSup);
+			helper::UpdateIssue(current_issue, issueDataSup);
 
 			const auto newTaskId{ helper::copy(current_issue.c_str()) };
 			if (!newTaskId) continue;
 
 			const auto issueDataDev{ helper::GetDevIssueData() };
-			helper::UpdateIssue(newTaskId->c_str(), issueDataDev);
+			helper::UpdateIssue(*newTaskId, issueDataDev);
 
 			send_msg_copy_issue(current_issue, newTaskId->c_str());
 		}
@@ -162,7 +162,7 @@ namespace helper
 		{
 			const auto issues_arr{ ::find_issues(csp_filters) };
 			if (issues_arr.empty())
-				std::println("Не удалось найти новые задачи!");
+				std::println(msg_hlp::couldnt_find_new_issues);
 			else
 				::push_to_working_issue(issues_arr);
 

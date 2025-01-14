@@ -9,10 +9,38 @@
 #include "json_helper.h"
 #include <string_view>
 
+namespace msg_hlp
+{
+	constexpr const char* run_every_five_minutes{ "Запуск каждые 5 мин...." };
+	constexpr const char* couldnt_find_new_issues{ "Не удалось найти новые задачи!" };
+	constexpr const char* couldnt_copy_issues{ "Не удалось скопировать задачу: {}!" };
+	constexpr const char* couldnt_find_key{ "Нет ключа в файле!" };
+}
+
+namespace
+{
+	bool is_status_code_ok(const cpr::Response& response);
+	cpr::Response put_response(const std::string_view url, const std::string_view IssueId, const std::string_view key, const nlohmann::json& issueData);
+	const std::optional<std::string> print_couldnt_copy_issue(const std::string_view issue_id);
+	cpr::Response get_response_nk(const std::string_view taskUrl);
+	cpr::Response post_response(const std::string_view url, const std::string_view key, const std::optional<nlohmann::json>& newTaskJson);
+	const std::string get_issueId_to_json(const nlohmann::json& createdTaskJson);
+	nlohmann::json get_relation_data(const std::string_view issue_id);
+	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey);
+}
+
 namespace helper
 {
-	std::optional<nlohmann::json> GetCopyIssueData(const char* IssueId, const char* targetProjectIdentifier);
+	std::optional<nlohmann::json> GetCopyIssueData(const std::string_view IssueId, const std::string_view targetProjectIdentifier);
 	bool is_key_bad(const std::optional<std::string>& key);
+	std::optional<cpr::Response> AddLinkIssue(const std::string_view FirstIssueId, const std::string_view SecondIssueId);
+	std::string put_url_update_issue(const std::string_view issue_id);
+
+	constexpr const char* fmt_put_response{ "{}/{}.json" };
+	constexpr const char* fmt_get_issues_url{ "{}/{}.json?key={}&include=attachments" };
+	constexpr const char* fmt_relation_url{ "{}/{}/relations.json" };
+	constexpr const char* fmt_put_update_issue{ "{}/issues/{}.json" };
+	constexpr const char* fmt_post_uploads { "{}/uploads.json" };
 
 	constexpr const char* REDMINE_URL{ "https://qa.fogsoft.ru" };
 	constexpr const char* REDMINE_URL_ISSUE = "https://qa.fogsoft.ru/issues";
@@ -108,73 +136,49 @@ namespace helper
 		return std::nullopt;
 	}
 
-	std::optional<std::string> getIssueUrl(const std::string& APIPath, const char* issue_id)
+	std::optional<std::string> getIssueUrl(const std::string& APIPath, const std::string_view issue_id)
 	{
-		if (const auto apiKey{ loadApiKey(APIPath) })
-		{
-			return REDMINE_URL_ISSUE + std::string("/") + issue_id + ".json?key=" + apiKey->c_str() + "&include=attachments";
-		}
-		return std::nullopt;
+		const auto key{ helper::loadApiKey(APIPath) };
+		if (helper::is_key_bad(key)) return std::nullopt;
+
+		return std::format(helper::fmt_get_issues_url, REDMINE_URL_ISSUE, issue_id, key->c_str());
 	}
 
-	std::optional<cpr::Response> GetIssue(const char* issue_id)
+	std::optional<cpr::Response> GetIssue(const std::string_view issue_id)
 	{
-		if (const auto taskUrl = getIssueUrl(API_PATH, issue_id))
-		{
-			auto response = cpr::Get(
-				cpr::Url{ taskUrl->c_str() },
-				cpr::VerifySsl{ false }
-			);
-			return response;
-		}
+		const auto taskUrl{ getIssueUrl(API_PATH, issue_id) };
+		if (!taskUrl) return std::nullopt;
 
-		return std::nullopt;
+		return ::get_response_nk(*taskUrl);
 	}
 
-	std::optional<cpr::Response> CopyIssue(const char* issue_id, const char* project_id)
+	std::optional<cpr::Response> CopyIssue(const std::string_view issue_id, const std::string_view project_id)
 	{
 		const auto newTaskJson{ GetCopyIssueData(issue_id, project_id) };
 		if (!newTaskJson) return std::nullopt;
 
 		const auto key{ loadApiKey(API_PATH) };
-		if (!key) return std::nullopt;
+		if (helper::is_key_bad(key)) return std::nullopt;
 
-		auto createResponse = cpr::Post(
-			cpr::Url{ ISSUE_URL_F },
-			cpr::VerifySsl{ false },
-			cpr::Header{
-				{X_Redmine_API_Key, key->c_str()},
-				{Content_Type, application_json} },
-				cpr::Body{ newTaskJson->dump() });
-
-		return createResponse;
+		return post_response(helper::ISSUE_URL_F, *key, newTaskJson);
 	}
 
-	cpr::Response DownloadAttachment(const char* ApiKey, const nlohmann::json& attachment_json)
+
+	cpr::Response DownloadAttachment(const std::string_view ApiKey, const nlohmann::json& attachment_json)
 	{
-		const auto fileResponse = cpr::Get(
-			cpr::Url{ attachment_json[content_url].get<std::string>() },
-			cpr::Header{ {X_Redmine_API_Key, ApiKey} },
-			cpr::VerifySsl{ false }
-		);
+		const auto url{ attachment_json[content_url].get<std::string>() };
 
-		return fileResponse;
+		return ::get_response_k(url, ApiKey);
 	}
-	cpr::Response UploadAttachment(const char* ApiKey, const cpr::Response& fileResponse)
+
+	cpr::Response UploadAttachment(const std::string_view ApiKey, const cpr::Response& fileResponse)
 	{
-		auto uploadResponse = cpr::Post(
-			cpr::Url{ REDMINE_URL + std::string("/uploads.json") },
-			cpr::Header{
-				{X_Redmine_API_Key, ApiKey},
-				{Content_Type, application_octet}
-			},
-			cpr::Body{ fileResponse.text },
-			cpr::VerifySsl{ false }
-		);
-
-		return uploadResponse;
+		const auto url{ std::format(helper::fmt_post_uploads, REDMINE_URL) };
+		return ::post_response(url, ApiKey, fileResponse.text);
 	}
-	cpr::Response AssociateAttachment(const char* ApiKey, const cpr::Response& uploadResponse, const nlohmann::json& attachment, const char* newTaskId)
+
+	cpr::Response AssociateAttachment(const std::string_view ApiKey,
+		const cpr::Response& uploadResponse, const nlohmann::json& attachment, const std::string_view newTaskId)
 	{
 		const auto uploadFileJson = nlohmann::json::parse(uploadResponse.text);
 		nlohmann::json updateAttachments = {
@@ -187,44 +191,31 @@ namespace helper
 			}}
 		};
 
-		const auto upload_url{ std::format("{}/issues/{}.json", REDMINE_URL, newTaskId) };
-
-		auto associateFileResponse = cpr::Put(
-			cpr::Url{ upload_url },
-			cpr::Header{
-				{X_Redmine_API_Key, ApiKey},
-				{Content_Type, application_json}
-			},
-			cpr::Body{ updateAttachments.dump() },
-			cpr::VerifySsl{ false }
-		);
-
-
-		return associateFileResponse;
+		const auto upload_url{ std::format(helper::fmt_put_update_issue, REDMINE_URL, newTaskId) };
+		return ::put_response(upload_url, newTaskId, ApiKey, updateAttachments);
 	}
 
 
-	bool CopyAttachment(const nlohmann::json& taskDetails, const char* newTaskId)
+	bool CopyAttachment(const nlohmann::json& taskDetails, const std::string_view newTaskId)
 	{
 		const auto key{ loadApiKey(API_PATH) };
-		if (!key) return false;
-
+		if (helper::is_key_bad(key)) return false;
 
 		for (const auto& attachment : taskDetails[attachments])
 		{
-			const auto fileResponse{ DownloadAttachment(key->c_str(), attachment) };
+			const auto fileResponse{ DownloadAttachment(*key, attachment) };
 			if (fileResponse.status_code != httpCodes::HTTP_OK) {
 				std::println("Ошибка загрузка файла {}: {}", attachment[filename].get<std::string>(), fileResponse.status_code);
 				return false;
 			}
 
-			const auto uploadResponse{ UploadAttachment(key->c_str(), fileResponse) };
+			const auto uploadResponse{ UploadAttachment(*key, fileResponse) };
 			if (uploadResponse.status_code != httpCodes::HTTP_POSTOK) {
 				std::println("Ошибка загрузки файла на сервер: {}", uploadResponse.status_code);
 				return false;
 			}
 
-			const auto associateFileResponse{ AssociateAttachment(key->c_str(), uploadResponse, attachment, newTaskId) };
+			const auto associateFileResponse{ AssociateAttachment(*key, uploadResponse, attachment, newTaskId) };
 			if (associateFileResponse.status_code != httpCodes::HTTP_OK && associateFileResponse.status_code != httpCodes::HTTP_NO_CONTENT) {
 				std::println("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code);
 				return false;
@@ -234,47 +225,30 @@ namespace helper
 		return true;
 	}
 
-	std::optional<cpr::Response> AddLinkIssue(const char* FirstIssueId, const char* SecondIssueId)
+	std::optional<cpr::Response> AddLinkIssue(const std::string_view FirstIssueId, const std::string_view SecondIssueId)
 	{
 		const auto key{ loadApiKey(API_PATH) };
-		if (!key) return std::nullopt;
+		if (helper::is_key_bad(key)) return std::nullopt;
 
-		nlohmann::json linkTask = {
-			{"relation", {
-				{"issue_to_id", FirstIssueId},
-				{"relation_type", "copied_from"},
-			}}
-		};
+		nlohmann::json linkTask{ ::get_relation_data(FirstIssueId) };
+		const auto url{ std::format(helper::fmt_relation_url,REDMINE_URL_ISSUE, SecondIssueId) };
+		const auto link_response{ ::post_response(url, *key, linkTask) };
 
-		auto link_response = cpr::Post(
-			cpr::Url{ std::format("{}/{}/relations.json",REDMINE_URL_ISSUE, SecondIssueId) },
-			cpr::VerifySsl{ false },
-			cpr::Header{ {Content_Type, application_json},
-						{X_Redmine_API_Key, key->c_str()} },
-			cpr::Body{ linkTask.dump() }
-		);
-
-		if (link_response.status_code == httpCodes::HTTP_POSTOK)
-		{
+		if (::is_status_code_ok(link_response))
 			return link_response;
-		}
 
 		return std::nullopt;
 	}
 
-	bool UpdateIssue(const char* IssueId, const nlohmann::json& issueData)
+	bool UpdateIssue(const std::string_view IssueId, const nlohmann::json& issueData)
 	{
 		const auto key{ loadApiKey(API_PATH) };
-		if (!key) return false;
+		if (helper::is_key_bad(key)) return false;
 
-		auto response = cpr::Put(
-			cpr::Url{ std::format("{}/{}.json", REDMINE_URL_ISSUE, IssueId) },
-			cpr::Header{ {Content_Type, application_json},
-						 {X_Redmine_API_Key, key->c_str()} },
-			cpr::VerifySsl{ false },
-			cpr::Body{ issueData.dump() });
+		const auto url{ helper::put_url_update_issue(IssueId) };
+		const auto response{ ::put_response(url, IssueId, *key, issueData) };
 
-		if (response.status_code == httpCodes::HTTP_OK || response.status_code == httpCodes::HTTP_NO_CONTENT)
+		if (::is_status_code_ok(response))
 			return true;
 
 		return false;
@@ -289,8 +263,6 @@ namespace helper
 			{{id, price}, {value, zero}},
 			{{id, talk_client}, {value, empty}}
 			});
-
-
 
 		const nlohmann::json request_body = {
 				{issue, {
@@ -314,17 +286,17 @@ namespace helper
 
 		const nlohmann::json request_body = {
 				{issue, {
-					//{assigned_to_id, User2},
-					{assigned_to_id, User3},
-					{custom_fields, customFields},
-					{status_id, status_open},
-				}}
+				//{assigned_to_id, User2},
+				{assigned_to_id, User3},
+				{custom_fields, customFields},
+				{status_id, status_open},
+			}}
 		};
 
 		return request_body;
 	}
 
-	std::optional<nlohmann::json> GetCopyIssueData(const char* IssueId, const char* targetProjectIdentifier)
+	std::optional<nlohmann::json> GetCopyIssueData(const std::string_view IssueId, const std::string_view targetProjectIdentifier)
 	{
 		const auto response{ helper::GetIssue(IssueId) };
 		if (!response && !response->status_code == httpCodes::HTTP_OK) return std::nullopt;
@@ -334,7 +306,7 @@ namespace helper
 
 		nlohmann::json newTaskJson = {
 			{issue, {
-				{project_id, targetProjectIdentifier},
+				{project_id, targetProjectIdentifier.data()},
 				{subject, taskDetails[subject]},
 				{description, taskDetails[description]},
 				{tracker_id, taskDetails[tracker][id]},
@@ -369,18 +341,17 @@ namespace helper
 		return newTaskJson;
 	}
 
-	std::optional<std::string> copy(const char* issue_id)
+	std::optional<std::string> copy(const std::string_view issue_id)
 	{
-
 		const auto targetProjectIdentifier{ helper::projectKdev };
 
 		const auto createResponse{ helper::CopyIssue(issue_id, targetProjectIdentifier) };
-		if (!createResponse) return std::nullopt;
+		if (!createResponse) return print_couldnt_copy_issue(issue_id);
 
-		const auto createdTaskJson = nlohmann::json::parse(createResponse->text);
-		const auto newTaskId = std::to_string(createdTaskJson[helper::issue][helper::id].get<int>());
+		const auto createdTaskJson{ nlohmann::json::parse(createResponse->text) };
+		const auto newTaskId{ ::get_issueId_to_json(createdTaskJson) };
 
-		const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId.c_str()) };
+		const auto linkResponse{ helper::AddLinkIssue(issue_id, newTaskId) };
 		if (!linkResponse) return newTaskId;
 
 		const auto response{ helper::GetIssue(issue_id) };
@@ -415,9 +386,81 @@ namespace helper
 	bool is_key_bad(const std::optional<std::string>& key)
 	{
 		if (!key) return true;
-		if (key->empty()) { std::println("Нет ключа в файле!"); return true; }
+		if (key->empty()) { std::println(msg_hlp::couldnt_find_key); return true; }
 
 		return false;
+	}
+
+	std::string put_url_update_issue(const std::string_view issue_id)
+	{
+		return std::format(helper::fmt_put_response, helper::REDMINE_URL_ISSUE, issue_id);
+	}
+}
+
+namespace
+{
+	bool is_status_code_ok(const cpr::Response& response)
+	{
+		return response.status_code == httpCodes::HTTP_OK || response.status_code == httpCodes::HTTP_NO_CONTENT;
+	}
+
+	cpr::Response put_response(const std::string_view url, const std::string_view IssueId, const std::string_view key, const nlohmann::json& issueData)
+	{
+		return cpr::Put(
+			cpr::Url{ url.data() },
+			cpr::Header{ { helper::Content_Type, helper::application_json },
+							{ helper::X_Redmine_API_Key, key.data()} },
+			cpr::VerifySsl{ false },
+			cpr::Body{ issueData.dump() });
+	}
+
+	const std::optional<std::string> print_couldnt_copy_issue(const std::string_view issue_id)
+	{
+		std::println(msg_hlp::couldnt_copy_issues, issue_id);
+		return std::nullopt;
+	}
+
+	cpr::Response get_response_nk(const std::string_view taskUrl)
+	{
+		return cpr::Get(
+			cpr::Url{ taskUrl.data() },
+			cpr::VerifySsl{ false }
+		);
+	}
+
+	cpr::Response post_response(const std::string_view url, const std::string_view key, const std::optional<nlohmann::json>& newTaskJson)
+	{
+		return cpr::Post(
+			cpr::Url{ url.data() },
+			cpr::VerifySsl{ false },
+			cpr::Header{
+				{ helper::X_Redmine_API_Key, key.data()},
+				{ helper::Content_Type, helper::application_json } },
+				cpr::Body{ newTaskJson->dump() });
+	}
+
+	const std::string get_issueId_to_json(const nlohmann::json& createdTaskJson)
+	{
+		return std::to_string(createdTaskJson[helper::issue][helper::id].get<int>());
+	}
+
+	nlohmann::json get_relation_data(const std::string_view issue_id)
+	{
+		return {
+					{"relation", {
+						{"issue_to_id", issue_id.data()},
+						{"relation_type", "copied_from"},
+					}}
+		};
+	}
+
+	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey)
+	{
+		return	cpr::Get(
+						cpr::Url{url.data()},
+						cpr::Header{ { helper::X_Redmine_API_Key, ApiKey.data() } },
+						cpr::VerifySsl{ false }
+		);
 	}
 }
 

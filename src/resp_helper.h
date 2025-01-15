@@ -15,11 +15,15 @@ namespace msg_hlp
 	constexpr const char* couldnt_find_new_issues{ "Не удалось найти новые задачи!" };
 	constexpr const char* couldnt_copy_issues{ "Не удалось скопировать задачу: {}!" };
 	constexpr const char* couldnt_find_key{ "Нет ключа в файле!" };
+	constexpr const char* err_upload_file{ "Ошибка загрузки файла на сервер: {}" };
+	constexpr const char* err_download_file { "Ошибка загрузка файла {}: {}" };
+	constexpr const char* err_associate_file { "Ошибка ассоциации файла с задачей: {}" };
 }
 
 namespace
 {
 	bool is_status_code_ok(const cpr::Response& response);
+	bool is_status_code_nook(const cpr::Response& response);
 	cpr::Response put_response(const std::string_view url, const std::string_view IssueId, const std::string_view key, const nlohmann::json& issueData);
 	const std::optional<std::string> print_couldnt_copy_issue(const std::string_view issue_id);
 	cpr::Response get_response_nk(const std::string_view taskUrl);
@@ -27,6 +31,10 @@ namespace
 	const std::string get_issueId_to_json(const nlohmann::json& createdTaskJson);
 	nlohmann::json get_relation_data(const std::string_view issue_id);
 	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey);
+	bool print_error_download_file(const nlohmann::json& attachment, const cpr::Response& fileResponse);
+	bool print_err_upload_file(const cpr::Response& uploadResponse);
+	bool print_err_associate_file(const cpr::Response& associateFileResponse);
+	bool __copy_attachment(const nlohmann::json& taskDetails, const std::string_view key, const std::string_view newTaskId);
 }
 
 namespace helper
@@ -34,6 +42,7 @@ namespace helper
 	std::optional<nlohmann::json> GetCopyIssueData(const std::string_view IssueId, const std::string_view targetProjectIdentifier);
 	bool is_key_bad(const std::optional<std::string>& key);
 	std::optional<cpr::Response> AddLinkIssue(const std::string_view FirstIssueId, const std::string_view SecondIssueId);
+	bool print_err_associate_file(const cpr::Response& associateFileResponse);
 	std::string put_url_update_issue(const std::string_view issue_id);
 
 	constexpr const char* fmt_put_response{ "{}/{}.json" };
@@ -163,11 +172,9 @@ namespace helper
 		return post_response(helper::ISSUE_URL_F, *key, newTaskJson);
 	}
 
-
 	cpr::Response DownloadAttachment(const std::string_view ApiKey, const nlohmann::json& attachment_json)
 	{
 		const auto url{ attachment_json[content_url].get<std::string>() };
-
 		return ::get_response_k(url, ApiKey);
 	}
 
@@ -195,34 +202,12 @@ namespace helper
 		return ::put_response(upload_url, newTaskId, ApiKey, updateAttachments);
 	}
 
-
 	bool CopyAttachment(const nlohmann::json& taskDetails, const std::string_view newTaskId)
 	{
 		const auto key{ loadApiKey(API_PATH) };
 		if (helper::is_key_bad(key)) return false;
 
-		for (const auto& attachment : taskDetails[attachments])
-		{
-			const auto fileResponse{ DownloadAttachment(*key, attachment) };
-			if (fileResponse.status_code != httpCodes::HTTP_OK) {
-				std::println("Ошибка загрузка файла {}: {}", attachment[filename].get<std::string>(), fileResponse.status_code);
-				return false;
-			}
-
-			const auto uploadResponse{ UploadAttachment(*key, fileResponse) };
-			if (uploadResponse.status_code != httpCodes::HTTP_POSTOK) {
-				std::println("Ошибка загрузки файла на сервер: {}", uploadResponse.status_code);
-				return false;
-			}
-
-			const auto associateFileResponse{ AssociateAttachment(*key, uploadResponse, attachment, newTaskId) };
-			if (associateFileResponse.status_code != httpCodes::HTTP_OK && associateFileResponse.status_code != httpCodes::HTTP_NO_CONTENT) {
-				std::println("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code);
-				return false;
-			}
-		}
-
-		return true;
+		return 	__copy_attachment(taskDetails, *key, newTaskId);
 	}
 
 	std::optional<cpr::Response> AddLinkIssue(const std::string_view FirstIssueId, const std::string_view SecondIssueId)
@@ -461,6 +446,49 @@ namespace
 						cpr::Header{ { helper::X_Redmine_API_Key, ApiKey.data() } },
 						cpr::VerifySsl{ false }
 		);
+	}
+
+	bool is_status_code_nook(const cpr::Response& response)
+	{
+		return !(::is_status_code_ok(response));
+	}
+
+	bool print_error_download_file(const nlohmann::json& attachment, const cpr::Response& fileResponse)
+	{
+		std::println(msg_hlp::err_download_file, attachment[helper::filename].get<std::string>(), fileResponse.status_code);
+		return false;
+	}
+
+	bool print_err_upload_file(const cpr::Response& uploadResponse)
+	{
+		std::println(msg_hlp::err_upload_file, uploadResponse.status_code);
+		return false;
+	}
+
+	bool print_err_associate_file(const cpr::Response& associateFileResponse)
+	{
+		std::println("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code);
+		return false;
+	}
+
+	bool __copy_attachment(const nlohmann::json& taskDetails, const std::string_view key, const std::string_view newTaskId)
+	{
+		for (const auto& attachment : taskDetails[helper::attachments])
+		{
+			const auto fileResponse{ helper::DownloadAttachment(key, attachment) };
+			if (::is_status_code_nook(fileResponse))
+				return print_error_download_file(attachment, fileResponse);
+
+			const auto uploadResponse{ helper::UploadAttachment(key, fileResponse) };
+			if (::is_status_code_nook(uploadResponse))
+				return ::print_err_upload_file(uploadResponse);
+
+			const auto associateFileResponse{ helper::AssociateAttachment(key, uploadResponse, attachment, newTaskId) };
+			if (::is_status_code_nook(associateFileResponse))
+				return ::print_err_associate_file(associateFileResponse);
+		}
+
+		return true;
 	}
 }
 

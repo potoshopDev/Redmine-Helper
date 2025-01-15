@@ -18,19 +18,18 @@ namespace msg_hlp
 	constexpr const char* err_upload_file{ "Ошибка загрузки файла на сервер: {}" };
 	constexpr const char* err_download_file { "Ошибка загрузка файла {}: {}" };
 	constexpr const char* err_associate_file { "Ошибка ассоциации файла с задачей: {}" };
+	constexpr const char* err_response_find{ "Запрос на получения списка задач закончился не удачей! \n Статус код: {}\n URL: {}" };
 }
 
 namespace
 {
 	bool is_status_code_ok(const cpr::Response& response);
-	bool is_status_code_nook(const cpr::Response& response);
 	cpr::Response put_response(const std::string_view url, const std::string_view IssueId, const std::string_view key, const nlohmann::json& issueData);
 	const std::optional<std::string> print_couldnt_copy_issue(const std::string_view issue_id);
 	cpr::Response get_response_nk(const std::string_view taskUrl);
 	cpr::Response post_response(const std::string_view url, const std::string_view key, const std::optional<nlohmann::json>& newTaskJson);
 	const std::string get_issueId_to_json(const nlohmann::json& createdTaskJson);
 	nlohmann::json get_relation_data(const std::string_view issue_id);
-	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey);
 	bool print_error_download_file(const nlohmann::json& attachment, const cpr::Response& fileResponse);
 	bool print_err_upload_file(const cpr::Response& uploadResponse);
 	bool print_err_associate_file(const cpr::Response& associateFileResponse);
@@ -44,10 +43,13 @@ namespace helper
 	std::optional<cpr::Response> AddLinkIssue(const std::string_view FirstIssueId, const std::string_view SecondIssueId);
 	bool print_err_associate_file(const cpr::Response& associateFileResponse);
 	std::string put_url_update_issue(const std::string_view issue_id);
+	bool is_status_code_nook(const cpr::Response& response);
+	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey);
 
 	constexpr const char* fmt_put_response{ "{}/{}.json" };
 	constexpr const char* fmt_get_issues_url{ "{}/{}.json?key={}&include=attachments" };
 	constexpr const char* fmt_relation_url{ "{}/{}/relations.json" };
+	constexpr const char* fmt_relation_issue_url{ "{}/issues/{}/relations.json" };
 	constexpr const char* fmt_put_update_issue{ "{}/issues/{}.json" };
 	constexpr const char* fmt_post_uploads { "{}/uploads.json" };
 
@@ -58,6 +60,8 @@ namespace helper
 	constexpr const char* YANDEX_URL = "https://yandex.ru";
 
 	constexpr const char* issue{ "issue" };
+	constexpr const char* issues{ "issues" };
+	constexpr const char* relations{ "relations" };
 	constexpr const char* project_id{ "project_id" };
 	constexpr const char* project{ "project" };
 	constexpr const char* subject{ "subject" };
@@ -175,7 +179,7 @@ namespace helper
 	cpr::Response DownloadAttachment(const std::string_view ApiKey, const nlohmann::json& attachment_json)
 	{
 		const auto url{ attachment_json[content_url].get<std::string>() };
-		return ::get_response_k(url, ApiKey);
+		return helper::get_response_k(url, ApiKey);
 	}
 
 	cpr::Response UploadAttachment(const std::string_view ApiKey, const cpr::Response& fileResponse)
@@ -380,6 +384,20 @@ namespace helper
 	{
 		return std::format(helper::fmt_put_response, helper::REDMINE_URL_ISSUE, issue_id);
 	}
+
+	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey)
+	{
+		return	cpr::Get(
+						cpr::Url{url.data()},
+						cpr::Header{ { helper::X_Redmine_API_Key, ApiKey.data() } },
+						cpr::VerifySsl{ false }
+		);
+	}
+
+	bool is_status_code_nook(const cpr::Response& response)
+	{
+		return !(::is_status_code_ok(response));
+	}
 }
 
 namespace
@@ -439,19 +457,6 @@ namespace
 		};
 	}
 
-	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey)
-	{
-		return	cpr::Get(
-						cpr::Url{url.data()},
-						cpr::Header{ { helper::X_Redmine_API_Key, ApiKey.data() } },
-						cpr::VerifySsl{ false }
-		);
-	}
-
-	bool is_status_code_nook(const cpr::Response& response)
-	{
-		return !(::is_status_code_ok(response));
-	}
 
 	bool print_error_download_file(const nlohmann::json& attachment, const cpr::Response& fileResponse)
 	{
@@ -476,15 +481,15 @@ namespace
 		for (const auto& attachment : taskDetails[helper::attachments])
 		{
 			const auto fileResponse{ helper::DownloadAttachment(key, attachment) };
-			if (::is_status_code_nook(fileResponse))
+			if (helper::is_status_code_nook(fileResponse))
 				return print_error_download_file(attachment, fileResponse);
 
 			const auto uploadResponse{ helper::UploadAttachment(key, fileResponse) };
-			if (::is_status_code_nook(uploadResponse))
+			if (helper::is_status_code_nook(uploadResponse))
 				return ::print_err_upload_file(uploadResponse);
 
 			const auto associateFileResponse{ helper::AssociateAttachment(key, uploadResponse, attachment, newTaskId) };
-			if (::is_status_code_nook(associateFileResponse))
+			if (helper::is_status_code_nook(associateFileResponse))
 				return ::print_err_associate_file(associateFileResponse);
 		}
 

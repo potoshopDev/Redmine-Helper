@@ -3,7 +3,16 @@ nlohmann_json/3.11.3
 gtest/1.15.0
 cpr/1.11.1
 tgbot/1.8
+imgui/cci.20230105+1.89.2.docking
+sdl/2.30.9
+directx-headers/1.614.0
 
 [generators]
 CMakeDeps
 CMakeToolchain
+
+[imports]
+./misc/bindings, imgui_impl_glfw.cpp -> ../bindings
+./misc/bindings, imgui_impl_opengl2.cpp -> ../bindings
+./misc/bindings, imgui_impl_glfw.h -> ../bindings
+./misc/bindings, imgui_impl_opengl2.h -> ../bindings

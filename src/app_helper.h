@@ -5,7 +5,6 @@
 #include <vector>
 #include <functional>
 #include <resp_helper.h>
-#include <tgbot/tgbot.h>
 #include <string_view>
 
 
@@ -17,7 +16,6 @@
 namespace helper
 {
 	constexpr const int NOT_SUITABLE{ -1 };
-	constexpr const char* TELEGRAM_KEY_PATH{ "TEL\\key.txt" };
 
 	using issues_array = std::vector<std::string>;
 	using filters = std::vector<std::pair<const char*, const char*>>;
@@ -178,55 +176,7 @@ namespace helper
 		}
 	}
 
-	using str_botToken = std::string;
-	using str_chatId = std::string;
-	using opt_tel_key = std::optional<std::pair <str_botToken, str_chatId>>;
 
-	opt_tel_key loadTelegramKey(const std::string& filePath)
-	{
-		std::ifstream file(filePath);
-		if (!file.is_open())
-		{
-			std::println("Не удалось найти файл {}", filePath);
-			return std::nullopt;
-		}
-
-		std::string botToken{};
-		std::string chatIp{};
-
-		if (std::getline(file, botToken) && std::getline(file, chatIp))
-		{
-			file.close();
-			return std::pair{ botToken, chatIp };
-		}
-		else
-		{
-			std::println("Не удалось прочитать Апи ключ из файла: {}", filePath);
-			file.close();
-			return std::nullopt;
-		}
-
-		file.close();
-		return std::nullopt;
-	}
-
-	void sendMessageToTelegram(const std::string_view message)
-	{
-		const auto key{ helper::loadTelegramKey(helper::TELEGRAM_KEY_PATH) };
-		if (!key) return;
-		const auto [botToken, chatId] = *key;
-
-		TgBot::Bot bot(botToken);
-
-		try
-		{
-			bot.getApi().sendMessage(chatId, message.data());
-		}
-		catch (const TgBot::TgException& e)
-		{
-			std::cerr << "Ошибка отправки сообщения: " << e.what() << std::endl;
-		}
-	}
 
 	//---------------example----------------
 	std::atomic<bool> isRunning(true);

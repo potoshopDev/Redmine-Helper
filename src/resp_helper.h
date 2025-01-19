@@ -8,6 +8,7 @@
 #include <format>
 #include "json_helper.h"
 #include <string_view>
+#include <tgbot/tgbot.h>
 
 namespace msg_hlp
 {
@@ -27,6 +28,7 @@ namespace
 	cpr::Response put_response(const std::string_view url, const std::string_view IssueId, const std::string_view key, const nlohmann::json& issueData);
 	const std::optional<std::string> print_couldnt_copy_issue(const std::string_view issue_id);
 	cpr::Response get_response_nk(const std::string_view taskUrl);
+	cpr::Response post_response(const std::string_view url, const std::string_view key,const cpr::Response& newTaskJson);
 	cpr::Response post_response(const std::string_view url, const std::string_view key, const std::optional<nlohmann::json>& newTaskJson);
 	const std::string get_issueId_to_json(const nlohmann::json& createdTaskJson);
 	nlohmann::json get_relation_data(const std::string_view issue_id);
@@ -45,6 +47,7 @@ namespace helper
 	std::string put_url_update_issue(const std::string_view issue_id);
 	bool is_status_code_nook(const cpr::Response& response);
 	cpr::Response get_response_k(const std::string_view url, const std::string_view ApiKey);
+	void sendMessageToTelegram(const std::string_view message);
 
 	constexpr const char* fmt_put_response{ "{}/{}.json" };
 	constexpr const char* fmt_get_issues_url{ "{}/{}.json?key={}&include=attachments" };
@@ -185,7 +188,7 @@ namespace helper
 	cpr::Response UploadAttachment(const std::string_view ApiKey, const cpr::Response& fileResponse)
 	{
 		const auto url{ std::format(helper::fmt_post_uploads, REDMINE_URL) };
-		return ::post_response(url, ApiKey, fileResponse.text);
+		return post_response(url, ApiKey, fileResponse);
 	}
 
 	cpr::Response AssociateAttachment(const std::string_view ApiKey,
@@ -349,7 +352,7 @@ namespace helper
 		const auto sourceTaskJson = nlohmann::json::parse(response->text);
 		auto taskDetails = sourceTaskJson[helper::issue];
 
-		const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId.c_str()) };
+		const auto copyAttachmentResult{ helper::CopyAttachment(taskDetails, newTaskId) };
 		if (!copyAttachmentResult) return newTaskId;
 
 		return newTaskId;
@@ -398,6 +401,57 @@ namespace helper
 	{
 		return !(::is_status_code_ok(response));
 	}
+
+	constexpr const char* TELEGRAM_KEY_PATH{ "TEL\\key.txt" };
+	using str_botToken = std::string;
+	using str_chatId = std::string;
+	using opt_tel_key = std::optional<std::pair <str_botToken, str_chatId>>;
+
+	opt_tel_key loadTelegramKey(const std::string& filePath)
+	{
+		std::ifstream file(filePath);
+		if (!file.is_open())
+		{
+			std::println("Не удалось найти файл {}", filePath);
+			return std::nullopt;
+		}
+
+		std::string botToken{};
+		std::string chatIp{};
+
+		if (std::getline(file, botToken) && std::getline(file, chatIp))
+		{
+			file.close();
+			return std::pair{ botToken, chatIp };
+		}
+		else
+		{
+			std::println("Не удалось прочитать Апи ключ из файла: {}", filePath);
+			file.close();
+			return std::nullopt;
+		}
+
+		file.close();
+		return std::nullopt;
+	}
+
+	void sendMessageToTelegram(const std::string_view message)
+	{
+		const auto key{ helper::loadTelegramKey(helper::TELEGRAM_KEY_PATH) };
+		if (!key) return;
+		const auto [botToken, chatId] = *key;
+
+		TgBot::Bot bot(botToken);
+
+		try
+		{
+			bot.getApi().sendMessage(chatId, message.data());
+		}
+		catch (const TgBot::TgException& e)
+		{
+			std::cerr << "Ошибка отправки сообщения: " << e.what() << std::endl;
+		}
+	}
 }
 
 namespace
@@ -431,6 +485,17 @@ namespace
 		);
 	}
 
+	cpr::Response post_response(const std::string_view url, const std::string_view key, const cpr::Response& newTaskJson)
+	{
+		return cpr::Post(
+			cpr::Url{ url.data() },
+			cpr::VerifySsl{ false },
+			cpr::Header{
+				{ helper::X_Redmine_API_Key, key.data()},
+				{ helper::Content_Type, helper::application_json } },
+				cpr::Body{ newTaskJson.text });
+	}
+
 	cpr::Response post_response(const std::string_view url, const std::string_view key, const std::optional<nlohmann::json>& newTaskJson)
 	{
 		return cpr::Post(
@@ -439,7 +504,7 @@ namespace
 			cpr::Header{
 				{ helper::X_Redmine_API_Key, key.data()},
 				{ helper::Content_Type, helper::application_json } },
-				cpr::Body{ newTaskJson->dump() });
+				cpr::Body{ newTaskJson->dump()});
 	}
 
 	const std::string get_issueId_to_json(const nlohmann::json& createdTaskJson)
@@ -460,19 +525,28 @@ namespace
 
 	bool print_error_download_file(const nlohmann::json& attachment, const cpr::Response& fileResponse)
 	{
-		std::println(msg_hlp::err_download_file, attachment[helper::filename].get<std::string>(), fileResponse.status_code);
+		const auto msg{ std::format(msg_hlp::err_download_file, attachment[helper::filename].get<std::string>(), fileResponse.status_code) };
+		std::println("{}", msg);
+		helper::sendMessageToTelegram(msg);
+
 		return false;
 	}
 
 	bool print_err_upload_file(const cpr::Response& uploadResponse)
 	{
-		std::println(msg_hlp::err_upload_file, uploadResponse.status_code);
+		const auto msg{ std::format(msg_hlp::err_upload_file, uploadResponse.status_code) };
+		std::println("{}", msg);
+		helper::sendMessageToTelegram(msg);
+
 		return false;
 	}
 
 	bool print_err_associate_file(const cpr::Response& associateFileResponse)
 	{
-		std::println("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code);
+		const auto msg{ std::format("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code) };
+		std::println("{}", msg);
+		helper::sendMessageToTelegram(msg);
+
 		return false;
 	}
 
@@ -485,7 +559,7 @@ namespace
 				return print_error_download_file(attachment, fileResponse);
 
 			const auto uploadResponse{ helper::UploadAttachment(key, fileResponse) };
-			if (helper::is_status_code_nook(uploadResponse))
+			if (uploadResponse.status_code != httpCodes::HTTP_POSTOK)
 				return ::print_err_upload_file(uploadResponse);
 
 			const auto associateFileResponse{ helper::AssociateAttachment(key, uploadResponse, attachment, newTaskId) };

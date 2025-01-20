@@ -14,28 +14,107 @@
 #include <utility>
 #include <wrl/client.h>
 #include <memory>
+#include <optional>
+#include <tuple>
 
 namespace
 {
-    using Microsoft::WRL::ComPtr;
-    
-    // Глобальные ресурсы DirectX с использованием умных указателей
-	inline ComPtr<ID3D11Device> g_pd3dDevice{};
-	inline ComPtr<ID3D11DeviceContext> g_pd3dDeviceContext{};
-	inline ComPtr<IDXGISwapChain> g_pSwapChain{};
-	inline ComPtr<ID3D11RenderTargetView> g_mainRenderTargetView{};
+	using Microsoft::WRL::ComPtr;
+	using Devices = std::tuple<ID3D11Device*, ID3D11DeviceContext*, IDXGISwapChain*>;
 
-	bool CreateDeviceD3D(HWND hWnd);
-	void CreateRenderTarget();
+	std::optional<Devices> CreateDeviceD3D(HWND hWnd);
+	std::optional<ID3D11RenderTargetView*> CreateRenderTarget(ID3D11Device* dev, IDXGISwapChain* sc);
 	void CleanupRenderTarget();
-
-//	SDL_Window* InitilizeSDLWindow();
-//	HWND GetHWND(SDL_Window* window);
-//	bool InitilizeDirectx(const  HWND hwnd);
 	void SDLClear(SDL_Window*);
-    [[nodiscard]] auto InitilizeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>;
-    [[nodiscard]] HWND GetHWND(SDL_Window* window);
-    [[nodiscard]] bool InitilizeDirectx(HWND hwnd);
+
+	class GraphicsDevice final
+	{
+		class iGraphicsDevice
+		{
+		public:
+			virtual inline ID3D11Device* GetDevice() const noexcept = 0;
+			virtual inline ID3D11DeviceContext* GetDeviceContext() const noexcept = 0;
+			virtual inline IDXGISwapChain* GetSwapChain() const noexcept = 0;
+			virtual inline ID3D11RenderTargetView* GetRenderTarget() const noexcept = 0;
+			virtual inline bool ResizeBuffer() noexcept = 0;
+			virtual inline bool is_Ready() const noexcept = 0;
+
+			virtual ~iGraphicsDevice() = default;
+		};
+
+		class oGraphicsDevice : public iGraphicsDevice
+		{
+		public:
+			virtual inline ID3D11Device* GetDevice() const noexcept override { return g_pd3dDevice.Get(); }
+			virtual inline ID3D11DeviceContext* GetDeviceContext()const noexcept override { return g_pd3dDeviceContext.Get(); }
+			virtual inline IDXGISwapChain* GetSwapChain() const noexcept override { return g_pSwapChain.Get(); }
+			virtual inline ID3D11RenderTargetView* GetRenderTarget() const noexcept override { return g_mainRenderTargetView.Get(); }
+			virtual inline bool is_Ready() const noexcept { return (g_pd3dDevice && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView); }
+			virtual inline bool ResizeBuffer() noexcept override
+			{
+				g_mainRenderTargetView->Release();
+				g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+				if (auto ren{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) })
+				{
+					g_mainRenderTargetView.Attach(*ren);
+					return true;
+				}
+
+				return false;
+			}
+
+		public:
+
+			oGraphicsDevice(HWND hwnd)
+			{
+				if (auto tmpDev{ CreateDeviceD3D(hwnd) })
+				{
+					auto& [Device, Context, SwapChain] = *tmpDev;
+					g_pd3dDevice.Attach(Device);
+					g_pd3dDeviceContext.Attach(Context);
+					g_pSwapChain.Attach(SwapChain);
+
+					if (auto tmpRen{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) })
+					{
+						g_mainRenderTargetView.Attach(*tmpRen);
+					}
+				}
+			}
+
+		private:
+			ComPtr<ID3D11Device> g_pd3dDevice{};
+			ComPtr<ID3D11DeviceContext> g_pd3dDeviceContext{};
+			ComPtr<IDXGISwapChain> g_pSwapChain{};
+			ComPtr<ID3D11RenderTargetView> g_mainRenderTargetView{};
+		};
+
+		const std::unique_ptr<iGraphicsDevice> _self;
+
+	public:
+
+		GraphicsDevice(HWND hwnd) : _self(std::make_unique<oGraphicsDevice>(hwnd)) {}
+
+		[[nodiscard]] inline ID3D11Device* GetDevice() const noexcept { return _self->GetDevice(); }
+		[[nodiscard]] inline ID3D11DeviceContext* GetDeviceContext()const noexcept { return _self->GetDeviceContext(); }
+		[[nodiscard]] inline IDXGISwapChain* GetSwapChain() const noexcept { return _self->GetSwapChain(); }
+		[[nodiscard]] inline ID3D11RenderTargetView* GetRenderTarget() const noexcept { return _self->GetRenderTarget(); }
+		inline bool ResizeBuffer() noexcept { return _self->ResizeBuffer(); }
+		inline bool is_Ready() const noexcept { return _self->is_Ready(); }
+	};
+
+	// Глобальные ресурсы DirectX с использованием умных указателей
+	//inline ComPtr<ID3D11Device> g_pd3dDevice{};
+	//inline ComPtr<ID3D11DeviceContext> g_pd3dDeviceContext{};
+	//inline ComPtr<IDXGISwapChain> g_pSwapChain{};
+	//inline ComPtr<ID3D11RenderTargetView> g_mainRenderTargetView{};
+
+
+	//	SDL_Window* InitilizeSDLWindow();
+	//	HWND GetHWND(SDL_Window* window);
+	//	bool InitilizeDirectx(const  HWND hwnd);
+	[[nodiscard]] auto InitilizeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>;
+	[[nodiscard]] HWND GetHWND(SDL_Window* window);
+	[[nodiscard]] bool InitilizeDirectx(HWND hwnd);
 }
 
 namespace ImGui
@@ -44,35 +123,36 @@ namespace ImGui
 	{
 		auto window{ InitilizeSDLWindow() };
 		const auto hwnd{ GetHWND(window.get()) };
+		auto DirectxDevice{ GraphicsDevice(hwnd) };
 
-		if (!InitilizeDirectx(hwnd))
+		if (!DirectxDevice.is_Ready())
 			return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIREXTX);
 
 
-		 //Setup Dear ImGui context
+		//Setup Dear ImGui context
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-		 //Setup Dear ImGui style
+		//Setup Dear ImGui style
 		ImGui::StyleColorsDark();
 		//ImGui::StyleColorsLight();
 
 		 //Setup Platform/Renderer backends
 		ImGui_ImplSDL2_InitForD3D(window.get());
-		ImGui_ImplDX11_Init(g_pd3dDevice.Get(), g_pd3dDeviceContext.Get());
+		ImGui_ImplDX11_Init(DirectxDevice.GetDevice(), DirectxDevice.GetDeviceContext());
 
-		 //Load Fonts
-		 //- If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-		 //- AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-		 //- If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-		 //- The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-		 //- Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-		 //- Read 'docs/FONTS.md' for more instructions and details.
-		 //- Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-		//io.Fonts->AddFontDefault();
+		//Load Fonts
+		//- If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+		//- AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+		//- If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+		//- The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+		//- Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+		//- Read 'docs/FONTS.md' for more instructions and details.
+		//- Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+	   //io.Fonts->AddFontDefault();
 		const auto font{ io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Arial.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesCyrillic()) };
 		//io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
 		//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
@@ -80,20 +160,20 @@ namespace ImGui
 		//ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesCyrillic());
 		IM_ASSERT(font != NULL);
 
-		 //Our state
+		//Our state
 		bool show_demo_window = true;
 		bool show_another_window = false;
 		ImVec4 clear_color = ImVec4(0.35f, 0.35f, 0.35f, 1.f);
 
-		 //Main loop
+		//Main loop
 		bool done = false;
 		while (!done)
 		{
-			 //Poll and handle events (inputs, window resize, etc.)
-			 //You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-			 //- When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-			 //- When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-			 //Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+			//Poll and handle events (inputs, window resize, etc.)
+			//You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+			//- When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+			//- When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+			//Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 			SDL_Event event;
 			while (SDL_PollEvent(&event))
 			{
@@ -104,23 +184,21 @@ namespace ImGui
 					done = true;
 				if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window.get()))
 				{
-					 //Release all outstanding references to the swap chain's buffers before resizing.
-					CleanupRenderTarget();
-					g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-					CreateRenderTarget();
+					//Release all outstanding references to the swap chain's buffers before resizing.
+					DirectxDevice.ResizeBuffer();
 				}
 			}
 
-			 //Start the Dear ImGui frame
+			//Start the Dear ImGui frame
 			ImGui_ImplDX11_NewFrame();
 			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
 
-			 //1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+			//1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 			if (show_demo_window)
 				ImGui::ShowDemoWindow(&show_demo_window);
 
-			 //2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+			//2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 			{
 				static float f = 0.0f;
 				static int counter = 0;
@@ -144,7 +222,7 @@ namespace ImGui
 			}
 
 
-			 //3. Show another simple window.
+			//3. Show another simple window.
 			if (show_another_window)
 			{
 				ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
@@ -160,18 +238,21 @@ namespace ImGui
 				ImGui::End();
 			}
 
-			 //Rendering
+			//Rendering
 			ImGui::Render();
 			const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-			g_pd3dDeviceContext->OMSetRenderTargets(1, g_mainRenderTargetView.GetAddressOf(), NULL);
-			g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView.Get(), clear_color_with_alpha);
+			auto* DContext{ DirectxDevice.GetDeviceContext() };
+			auto* DRen{ DirectxDevice.GetRenderTarget() };
+			
+			DContext->OMSetRenderTargets(1, &DRen, NULL);
+			DContext->ClearRenderTargetView(DRen, clear_color_with_alpha);
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-			g_pSwapChain->Present(1, 0); // Present with vsync
+			DirectxDevice.GetSwapChain()->Present(1, 0); // Present with vsync
 			//g_pSwapChain->Present(0, 0); // Present without vsync
 		}
 
-		 //Cleanup
+		//Cleanup
 		ImGui_ImplDX11_Shutdown();
 		ImGui_ImplSDL2_Shutdown();
 		ImGui::DestroyContext();
@@ -182,9 +263,9 @@ namespace ImGui
 
 namespace
 {
-	bool CreateDeviceD3D(HWND hWnd)
+	std::optional<Devices> CreateDeviceD3D(HWND hWnd)
 	{
-		 //Setup swap chain
+		//Setup swap chain
 		DXGI_SWAP_CHAIN_DESC sd;
 		ZeroMemory(&sd, sizeof(sd));
 		sd.BufferCount = 2;
@@ -205,27 +286,34 @@ namespace
 		createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 		D3D_FEATURE_LEVEL featureLevel;
 		const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-		if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext) != S_OK)
-			return false;
 
-		CreateRenderTarget();
-		return true;
+		ID3D11Device* Device{};
+		ID3D11DeviceContext* Context{};
+		IDXGISwapChain* SwapChain{};
+
+		if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &SwapChain, &Device, &featureLevel, &Context) != S_OK)
+			return std::nullopt;
+
+		return std::tuple(Device, Context, SwapChain);
 	}
 
-	void CreateRenderTarget()
+	std::optional<ID3D11RenderTargetView*> CreateRenderTarget(ID3D11Device* dev, IDXGISwapChain* sc)
 	{
-		ID3D11Texture2D* pBackBuffer;
-		g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-		g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_mainRenderTargetView);
-		pBackBuffer->Release();
+		ComPtr<ID3D11Texture2D> pBackBuffer{};
+		sc->GetBuffer(0, IID_PPV_ARGS(pBackBuffer.GetAddressOf()));
+
+		ID3D11RenderTargetView* RenderTV{};
+		if (SUCCEEDED(dev->CreateRenderTargetView(pBackBuffer.Get(), NULL, &RenderTV)))
+			return RenderTV;
+
+		return std::nullopt;
 	}
 
-	void CleanupRenderTarget()
+	void CleanupRenderTarget(ID3D11RenderTargetView* ren)
 	{
-		if (g_mainRenderTargetView.Get()) { g_mainRenderTargetView.Reset(); g_mainRenderTargetView.Reset(); }
 	}
 
-    auto InitilizeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
+	auto InitilizeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
 	{
 		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 		return  std::unique_ptr<SDL_Window, decltype(&SDLClear)>

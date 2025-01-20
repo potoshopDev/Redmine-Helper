@@ -1,10 +1,3 @@
-//
-//
-// Dear ImGui: standalone example application for SDL2 + DirectX 11
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
-//
 #include "ui.h"
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
@@ -24,8 +17,9 @@ namespace
 
 	std::optional<Devices> CreateDeviceD3D(HWND hWnd);
 	std::optional<ID3D11RenderTargetView*> CreateRenderTarget(ID3D11Device* dev, IDXGISwapChain* sc);
-	void CleanupRenderTarget();
 	void SDLClear(SDL_Window*);
+	[[nodiscard]] auto InitializeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>;
+	[[nodiscard]] HWND GetHWND(SDL_Window* window);
 
 	class GraphicsDevice final
 	{
@@ -50,18 +44,7 @@ namespace
 			virtual inline IDXGISwapChain* GetSwapChain() const noexcept override { return g_pSwapChain.Get(); }
 			virtual inline ID3D11RenderTargetView* GetRenderTarget() const noexcept override { return g_mainRenderTargetView.Get(); }
 			virtual inline bool is_Ready() const noexcept { return (g_pd3dDevice && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView); }
-			virtual inline bool ResizeBuffer() noexcept override
-			{
-				g_mainRenderTargetView->Release();
-				g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-				if (auto ren{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) })
-				{
-					g_mainRenderTargetView.Attach(*ren);
-					return true;
-				}
-
-				return false;
-			}
+			virtual inline bool ResizeBuffer() noexcept override;
 
 		public:
 
@@ -102,63 +85,46 @@ namespace
 		inline bool is_Ready() const noexcept { return _self->is_Ready(); }
 	};
 
-	// Глобальные ресурсы DirectX с использованием умных указателей
-	//inline ComPtr<ID3D11Device> g_pd3dDevice{};
-	//inline ComPtr<ID3D11DeviceContext> g_pd3dDeviceContext{};
-	//inline ComPtr<IDXGISwapChain> g_pSwapChain{};
-	//inline ComPtr<ID3D11RenderTargetView> g_mainRenderTargetView{};
+	inline bool GraphicsDevice::oGraphicsDevice::ResizeBuffer() noexcept
+	{
+		g_mainRenderTargetView.Reset();
+		g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+		if (auto ren{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) })
+		{
+			g_mainRenderTargetView.Attach(*ren);
+			return true;
+		}
 
-
-	//	SDL_Window* InitilizeSDLWindow();
-	//	HWND GetHWND(SDL_Window* window);
-	//	bool InitilizeDirectx(const  HWND hwnd);
-	[[nodiscard]] auto InitilizeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>;
-	[[nodiscard]] HWND GetHWND(SDL_Window* window);
-	[[nodiscard]] bool InitilizeDirectx(HWND hwnd);
+		return false;
+	}
 }
 
 namespace ImGui
 {
 	int RunUI()
 	{
-		auto window{ InitilizeSDLWindow() };
+		auto window{ InitializeSDLWindow() };
 		const auto hwnd{ GetHWND(window.get()) };
-		auto DirectxDevice{ GraphicsDevice(hwnd) };
+		auto DirectXDevice{ GraphicsDevice(hwnd) };
 
-		if (!DirectxDevice.is_Ready())
+		if (!DirectXDevice.is_Ready())
 			return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIREXTX);
 
-
-		//Setup Dear ImGui context
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-		//Setup Dear ImGui style
+		//Setup
 		ImGui::StyleColorsDark();
-		//ImGui::StyleColorsLight();
 
 		 //Setup Platform/Renderer backends
 		ImGui_ImplSDL2_InitForD3D(window.get());
-		ImGui_ImplDX11_Init(DirectxDevice.GetDevice(), DirectxDevice.GetDeviceContext());
+		ImGui_ImplDX11_Init(DirectXDevice.GetDevice(), DirectXDevice.GetDeviceContext());
 
-		//Load Fonts
-		//- If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-		//- AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-		//- If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-		//- The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-		//- Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-		//- Read 'docs/FONTS.md' for more instructions and details.
-		//- Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-	   //io.Fonts->AddFontDefault();
 		const auto font{ io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Arial.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesCyrillic()) };
-		//io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-		//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-		//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-		//ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesCyrillic());
-		IM_ASSERT(font != NULL);
+		IM_ASSERT(font != nullptr);
 
 		//Our state
 		bool show_demo_window = true;
@@ -185,7 +151,7 @@ namespace ImGui
 				if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window.get()))
 				{
 					//Release all outstanding references to the swap chain's buffers before resizing.
-					DirectxDevice.ResizeBuffer();
+					DirectXDevice.ResizeBuffer();
 				}
 			}
 
@@ -241,14 +207,14 @@ namespace ImGui
 			//Rendering
 			ImGui::Render();
 			const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-			auto* DContext{ DirectxDevice.GetDeviceContext() };
-			auto* DRen{ DirectxDevice.GetRenderTarget() };
-			
-			DContext->OMSetRenderTargets(1, &DRen, NULL);
+			auto* DContext{ DirectXDevice.GetDeviceContext() };
+			auto* DRen{ DirectXDevice.GetRenderTarget() };
+
+			DContext->OMSetRenderTargets(1, &DRen, nullptr);
 			DContext->ClearRenderTargetView(DRen, clear_color_with_alpha);
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-			DirectxDevice.GetSwapChain()->Present(1, 0); // Present with vsync
+			DirectXDevice.GetSwapChain()->Present(1, 0); // Present with vsync
 			//g_pSwapChain->Present(0, 0); // Present without vsync
 		}
 
@@ -309,11 +275,7 @@ namespace
 		return std::nullopt;
 	}
 
-	void CleanupRenderTarget(ID3D11RenderTargetView* ren)
-	{
-	}
-
-	auto InitilizeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
+	auto InitializeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
 	{
 		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 		return  std::unique_ptr<SDL_Window, decltype(&SDLClear)>
@@ -326,15 +288,9 @@ namespace
 		SDL_VERSION(&wmInfo.version);
 		SDL_GetWindowWMInfo(window, &wmInfo);
 
-		return (HWND)wmInfo.info.win.window;
+		return static_cast<HWND>(wmInfo.info.win.window);
 	}
-	bool InitilizeDirectx(const HWND hwnd)
-	{
-		if (!CreateDeviceD3D(hwnd))
-			return false;
 
-		return true;
-	}
 	void SDLClear(SDL_Window* window)
 	{
 		SDL_DestroyWindow(window);

@@ -20,6 +20,7 @@ namespace
 	void SDLClear(SDL_Window*);
 	[[nodiscard]] auto InitializeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>;
 	[[nodiscard]] HWND GetHWND(SDL_Window* window);
+	void SHutdown();
 
 	class GraphicsDevice final
 	{
@@ -46,23 +47,39 @@ namespace
 			virtual inline bool is_Ready() const noexcept { return (g_pd3dDevice && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView); }
 			virtual inline bool ResizeBuffer() noexcept override;
 
-		public:
-
-			oGraphicsDevice(HWND hwnd)
+			// Конструктор копирования
+			oGraphicsDevice(const oGraphicsDevice& other)
 			{
-				if (auto tmpDev{ CreateDeviceD3D(hwnd) })
-				{
-					auto& [Device, Context, SwapChain] = *tmpDev;
-					g_pd3dDevice.Attach(Device);
-					g_pd3dDeviceContext.Attach(Context);
-					g_pSwapChain.Attach(SwapChain);
+				g_pd3dDevice = other.g_pd3dDevice;
+				g_pd3dDeviceContext = other.g_pd3dDeviceContext;
+				g_pSwapChain = other.g_pSwapChain;
 
-					if (auto tmpRen{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) })
-					{
-						g_mainRenderTargetView.Attach(*tmpRen);
-					}
+				// Создать новый render target для копии, если нужно
+				if (other.g_mainRenderTargetView)
+				{
+					auto ren{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) };
+					g_mainRenderTargetView.Attach(*ren);
 				}
 			}
+
+			// Конструктор перемещения
+			oGraphicsDevice(oGraphicsDevice&& other) noexcept
+			{
+				g_pd3dDevice = std::move(other.g_pd3dDevice);
+				g_pd3dDeviceContext = std::move(other.g_pd3dDeviceContext);
+				g_pSwapChain = std::move(other.g_pSwapChain);
+				g_mainRenderTargetView = std::move(other.g_mainRenderTargetView);
+				// Перемещаемые ресурсы теперь в `other` находятся в корректном состоянии.
+				other.g_pd3dDevice = nullptr;
+				other.g_pd3dDeviceContext = nullptr;
+				other.g_pSwapChain = nullptr;
+				other.g_mainRenderTargetView = nullptr;
+			}
+
+
+		public:
+
+			oGraphicsDevice(HWND hwnd);
 
 		private:
 			ComPtr<ID3D11Device> g_pd3dDevice{};
@@ -71,11 +88,17 @@ namespace
 			ComPtr<ID3D11RenderTargetView> g_mainRenderTargetView{};
 		};
 
-		const std::unique_ptr<iGraphicsDevice> _self;
+		std::unique_ptr<iGraphicsDevice> _self;
 
 	public:
 
 		GraphicsDevice(HWND hwnd) : _self(std::make_unique<oGraphicsDevice>(hwnd)) {}
+
+		// Конструктор копирования
+		GraphicsDevice(const GraphicsDevice& other) : _self(std::make_unique<oGraphicsDevice>(*static_cast<oGraphicsDevice*>(other._self.get()))) {}
+
+		// Конструктор перемещения
+		GraphicsDevice(GraphicsDevice&& other) noexcept : _self(std::move(other._self)) {}
 
 		[[nodiscard]] inline ID3D11Device* GetDevice() const noexcept { return _self->GetDevice(); }
 		[[nodiscard]] inline ID3D11DeviceContext* GetDeviceContext()const noexcept { return _self->GetDeviceContext(); }
@@ -97,6 +120,27 @@ namespace
 
 		return false;
 	}
+
+	GraphicsDevice::oGraphicsDevice::oGraphicsDevice(HWND hwnd)
+	{
+		if (auto tmpDev{ CreateDeviceD3D(hwnd) })
+		{
+			auto& [Device, Context, SwapChain] = *tmpDev;
+			g_pd3dDevice.Attach(Device);
+			g_pd3dDeviceContext.Attach(Context);
+			g_pSwapChain.Attach(SwapChain);
+
+			if (auto tmpRen{ CreateRenderTarget(g_pd3dDevice.Get(), g_pSwapChain.Get()) })
+			{
+				g_mainRenderTargetView.Attach(*tmpRen);
+			}
+		}
+	}
+
+	void SetupImGui(SDL_Window& window, GraphicsDevice& device);
+	void EventProcessing(GraphicsDevice& device, SDL_Window& window, bool& done);
+	void StartFrame();
+	void Rendering(GraphicsDevice& device, ImVec4& clearColor);
 }
 
 namespace ImGui
@@ -110,55 +154,19 @@ namespace ImGui
 		if (!DirectXDevice.is_Ready())
 			return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIREXTX);
 
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-		//Setup
-		ImGui::StyleColorsDark();
-
-		 //Setup Platform/Renderer backends
-		ImGui_ImplSDL2_InitForD3D(window.get());
-		ImGui_ImplDX11_Init(DirectXDevice.GetDevice(), DirectXDevice.GetDeviceContext());
-
-		const auto font{ io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Arial.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesCyrillic()) };
-		IM_ASSERT(font != nullptr);
+		SetupImGui(*window, DirectXDevice);
 
 		//Our state
 		bool show_demo_window = true;
 		bool show_another_window = false;
-		ImVec4 clear_color = ImVec4(0.35f, 0.35f, 0.35f, 1.f);
+		ImVec4 clearColor = ImVec4(0.35f, 0.35f, 0.35f, 1.f);
 
 		//Main loop
 		bool done = false;
 		while (!done)
 		{
-			//Poll and handle events (inputs, window resize, etc.)
-			//You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-			//- When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-			//- When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-			//Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-			SDL_Event event;
-			while (SDL_PollEvent(&event))
-			{
-				ImGui_ImplSDL2_ProcessEvent(&event);
-				if (event.type == SDL_QUIT)
-					done = true;
-				if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window.get()))
-					done = true;
-				if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window.get()))
-				{
-					//Release all outstanding references to the swap chain's buffers before resizing.
-					DirectXDevice.ResizeBuffer();
-				}
-			}
-
-			//Start the Dear ImGui frame
-			ImGui_ImplDX11_NewFrame();
-			ImGui_ImplSDL2_NewFrame();
-			ImGui::NewFrame();
+			EventProcessing(DirectXDevice, *window, done);
+			StartFrame();
 
 			//1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 			if (show_demo_window)
@@ -176,7 +184,7 @@ namespace ImGui
 				ImGui::Checkbox("Another Window", &show_another_window);
 
 				ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-				ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+				ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
 				if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
 					counter++;
@@ -197,6 +205,7 @@ namespace ImGui
 					show_another_window = false;
 				ImGui::End();
 			}
+
 			{
 				ImGui::Begin("New windows");
 				ImGui::Text("СЌС‚РѕС‚ С‚РµРєСЃС‚ РЅР° СЂСѓСЃСЃРєРѕРј");
@@ -204,31 +213,56 @@ namespace ImGui
 				ImGui::End();
 			}
 
-			//Rendering
-			ImGui::Render();
-			const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-			auto* DContext{ DirectXDevice.GetDeviceContext() };
-			auto* DRen{ DirectXDevice.GetRenderTarget() };
+			Rendering(DirectXDevice, clearColor);
 
-			DContext->OMSetRenderTargets(1, &DRen, nullptr);
-			DContext->ClearRenderTargetView(DRen, clear_color_with_alpha);
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-			DirectXDevice.GetSwapChain()->Present(1, 0); // Present with vsync
-			//g_pSwapChain->Present(0, 0); // Present without vsync
 		}
 
-		//Cleanup
-		ImGui_ImplDX11_Shutdown();
-		ImGui_ImplSDL2_Shutdown();
-		ImGui::DestroyContext();
-
+		SHutdown();
 		return std::to_underlying(RETURN_CODE::SUCCESED);
 	}
 }
 
 namespace
 {
+	void Rendering(GraphicsDevice& device, ImVec4& clearColor)
+	{
+		ImGui::Render();
+		const float clear_color_with_alpha[4] = { clearColor.x * clearColor.w, clearColor.y * clearColor.w, clearColor.z * clearColor.w, clearColor.w };
+		auto* DContext{ device.GetDeviceContext() };
+		auto* DRen{ device.GetRenderTarget() };
+
+		DContext->OMSetRenderTargets(1, &DRen, nullptr);
+		DContext->ClearRenderTargetView(DRen, clear_color_with_alpha);
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+		device.GetSwapChain()->Present(1, 0); // Present with vsync
+	}
+
+	void EventProcessing(GraphicsDevice& device,SDL_Window& window, bool& done)
+	{
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			ImGui_ImplSDL2_ProcessEvent(&event);
+			if (event.type == SDL_QUIT)
+				done = true;
+			if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(&window))
+				done = true;
+			if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(&window))
+			{
+				//Release all outstanding references to the swap chain's buffers before resizing.
+				device.ResizeBuffer();
+			}
+		}
+	}
+	void StartFrame()
+	{
+		//Start the Dear ImGui frame
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+	}
+
 	std::optional<Devices> CreateDeviceD3D(HWND hWnd)
 	{
 		//Setup swap chain
@@ -295,5 +329,30 @@ namespace
 	{
 		SDL_DestroyWindow(window);
 		SDL_Quit();
+	}
+
+	void SHutdown()
+	{
+		ImGui_ImplDX11_Shutdown();
+		ImGui_ImplSDL2_Shutdown();
+		ImGui::DestroyContext();
+	}
+
+	void SetupImGui(SDL_Window& window, GraphicsDevice& device)
+	{
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+		//Setup
+		ImGui::StyleColorsDark();
+
+		//Setup Platform/Renderer backends
+		ImGui_ImplSDL2_InitForD3D(&window);
+		ImGui_ImplDX11_Init(device.GetDevice(), device.GetDeviceContext());
+
+		const auto font{ io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Arial.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesCyrillic()) };
+		IM_ASSERT(font != nullptr);
+
 	}
 }

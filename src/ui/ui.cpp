@@ -168,9 +168,15 @@ int RunUI()
 
     // Main loop
     bool done = false;
-    helper::WindowsStack winData{};
-    winData.emplace_back(helper::demoWindow);
-    winData.emplace_back(helper::simpleWindow);
+    
+    helper::WindowData windowData{};
+    windowData.set(helper::titleSimpleWindow, true);
+    windowData.set(helper::titleDemoWindow, false);
+
+
+    helper::WindowsApp winApp{.windowsData = windowData};
+    winApp.emplace_back(helper::demoWindow);
+    winApp.emplace_back(helper::simpleWindow);
 
     while (!done)
     {
@@ -180,7 +186,7 @@ int RunUI()
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about
         // Dear ImGui!). if (show_demo_window) 	ImGui::ShowDemoWindow(&show_demo_window);
 
-        helper::draw(winData);
+        helper::draw(winApp);
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {

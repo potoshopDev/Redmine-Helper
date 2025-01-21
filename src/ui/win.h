@@ -8,13 +8,13 @@ namespace helper
 constexpr const char* titleDemoWindow{"Демо окно"};
 constexpr const char* titleSimpleWindow{"Простое окно"};
 
-DemoWindowData demoWindow{
+DemoWindowFront demoWindow{
     .contentRenderer = [](bool& showDemoWindow)
     {
         ImGui::ShowDemoWindow(&showDemoWindow);
     }};
 
-const WindowData simpleWindow{.title = helper::titleSimpleWindow,
+const WindowFront simpleWindow{.title = helper::titleSimpleWindow,
     .contentRenderer = []()
     {
         static float f = 0.0f;

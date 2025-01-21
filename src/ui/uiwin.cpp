@@ -3,10 +3,10 @@
 namespace helper
 {
 
-void draw(const WindowsStack& windows)
+void draw(WindowsApp& app)
 {
-    for (const auto& window : windows)
-        draw(window);
+    for (const auto& window : app.windowsStack)
+        draw(window, app.windowsData);
 }
 }  // namespace helper
 
@@ -15,13 +15,13 @@ void draw(const WindowsStack& windows)
 // #include <string>
 //
 //// Структура данных для управления окнами
-// struct WindowData {
+// struct WindowFront {
 //	std::string title;                               // Заголовок окна
 //	std::function<void()> contentRenderer;           // Функция для отрисовки содержимого окна
 // };
 //
 //// Основная структура для управления окнами
-// std::vector<WindowData> windows;
+// std::vector<WindowFront> windows;
 //
 //// Добавление нового окна в динамический список
 // void AddWindow(const std::string& title, const std::function<void()>& renderer) {
@@ -31,7 +31,7 @@ void draw(const WindowsStack& windows)
 //// Удаление окна по заголовку
 // void RemoveWindow(const std::string& title) {
 //	windows.erase(std::remove_if(windows.begin(), windows.end(),
-//		[&title](const WindowData& window) { return window.title == title; }),
+//		[&title](const WindowFront& window) { return window.title == title; }),
 //		windows.end());
 // }
 //
@@ -105,20 +105,20 @@ void draw(const WindowsStack& windows)
 //
 // class WindowManager {
 // public:
-//	struct WindowData {
+//	struct WindowFront {
 //		std::string title;                               // Заголовок окна
 //		std::function<void()> contentRenderer;           // Функция для отрисовки содержимого окна
 //	};
 //
 //	// Добавление нового окна
 //	void AddWindow(const std::string& title, const std::function<void()>& renderer) {
-//		windows.emplace_back(WindowData{ title, renderer });
+//		windows.emplace_back(WindowFront{ title, renderer });
 //	}
 //
 //	// Удаление окна по заголовку
 //	void RemoveWindow(const std::string& title) {
 //		windows.erase(std::remove_if(windows.begin(), windows.end(),
-//			[&title](const WindowData& window) { return window.title == title; }),
+//			[&title](const WindowFront& window) { return window.title == title; }),
 //			windows.end());
 //	}
 //
@@ -132,7 +132,7 @@ void draw(const WindowsStack& windows)
 //	}
 //
 // private:
-//	std::vector<WindowData> windows;                     // Хранилище всех окон
+//	std::vector<WindowFront> windows;                     // Хранилище всех окон
 // };
 //
 //// Основной пример использования

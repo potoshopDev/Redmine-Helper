@@ -58,6 +58,7 @@ target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gt
 set (SOURCESG 
 	src/main_gui.cpp
 	src/ui/ui.cpp
+	src/ui/uiwin.cpp
 	build/backends/imgui_impl_sdl.cpp
 	build/backends/imgui_impl_dx11.cpp
 )
@@ -66,6 +67,7 @@ set (HEADERG
 	src/resp_helper.h
 	src/app_helper.h
 	src/ui/ui.h
+	src/ui/uiwin.h
 	build/backends/imgui_impl_sdl.h
 	build/backends/imgui_impl_dx11.h
 )

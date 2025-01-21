@@ -66,7 +66,8 @@ set (HEADERG
 	src/json_helper.h
 	src/resp_helper.h
 	src/app_helper.h
-	src/ui/ui.h
+	src/ui/windata.h
+	src/ui/win.h
 	src/ui/uiwin.h
 	build/backends/imgui_impl_sdl.h
 	build/backends/imgui_impl_dx11.h

@@ -1,42 +1,51 @@
 #include "uiwin.h"
 
+namespace helper
+{
+
+void draw(const WindowsStack& windows)
+{
+    for (const auto& window : windows)
+        draw(window);
+}
+}  // namespace helper
 
 //
-//#include <vector>
-//#include <string>
+// #include <vector>
+// #include <string>
 //
 //// Структура данных для управления окнами
-//struct WindowData {
+// struct WindowData {
 //	std::string title;                               // Заголовок окна
 //	std::function<void()> contentRenderer;           // Функция для отрисовки содержимого окна
-//};
+// };
 //
 //// Основная структура для управления окнами
-//std::vector<WindowData> windows;
+// std::vector<WindowData> windows;
 //
 //// Добавление нового окна в динамический список
-//void AddWindow(const std::string& title, const std::function<void()>& renderer) {
+// void AddWindow(const std::string& title, const std::function<void()>& renderer) {
 //	windows.push_back({ title, renderer });
-//}
+// }
 //
 //// Удаление окна по заголовку
-//void RemoveWindow(const std::string& title) {
+// void RemoveWindow(const std::string& title) {
 //	windows.erase(std::remove_if(windows.begin(), windows.end(),
 //		[&title](const WindowData& window) { return window.title == title; }),
 //		windows.end());
-//}
+// }
 //
 //// Основной цикл отрисовки ImGui
-//void RenderWindows() {
+// void RenderWindows() {
 //	for (const auto& window : windows) {
 //		ImGui::Begin(window.title.c_str());          // Создаём окно
 //		window.contentRenderer();                   // Отображаем содержимое окна (вызов функции из структуры)
 //		ImGui::End();                               // Завершаем отрисовку окна
 //	}
-//}
+// }
 //
 //// Пример запуска программы
-//void RunExample() {
+// void RunExample() {
 //	// Добавляем первое окно
 //	AddWindow("Окно 1", []() {
 //		static float f = 0.0f;
@@ -61,9 +70,9 @@
 //			RemoveWindow("Окно 3");
 //		}
 //		});
-//}
+// }
 //
-//int main() {
+// int main() {
 //	// Контекст ImGui (создание контекста, настройка окна и т.д.)
 //	IMGUI_CHECKVERSION();
 //	ImGui::CreateContext();
@@ -85,17 +94,17 @@
 //
 //	ImGui::DestroyContext();
 //	return 0;
-//}
+// }
 //
 //
-//#include "imgui.h"
-//#include <vector>
-//#include <string>
-//#include <algorithm>
-//#include <functional>
+// #include "imgui.h"
+// #include <vector>
+// #include <string>
+// #include <algorithm>
+// #include <functional>
 //
-//class WindowManager {
-//public:
+// class WindowManager {
+// public:
 //	struct WindowData {
 //		std::string title;                               // Заголовок окна
 //		std::function<void()> contentRenderer;           // Функция для отрисовки содержимого окна
@@ -122,12 +131,12 @@
 //		}
 //	}
 //
-//private:
+// private:
 //	std::vector<WindowData> windows;                     // Хранилище всех окон
-//};
+// };
 //
 //// Основной пример использования
-//void RunExample(WindowManager& manager) {
+// void RunExample(WindowManager& manager) {
 //	// Добавляем первое окно
 //	manager.AddWindow("Окно 1", []() {
 //		static float f = 0.0f;
@@ -152,9 +161,9 @@
 //			manager.RemoveWindow("Окно 3");
 //		}
 //		});
-//}
+// }
 //
-//int main() {
+// int main() {
 //	// Контекст ImGui (создание контекста, настройка окна и т.д.)
 //	IMGUI_CHECKVERSION();
 //	ImGui::CreateContext();
@@ -176,5 +185,5 @@
 //
 //	ImGui::DestroyContext();
 //	return 0;
-//}
+// }
 //

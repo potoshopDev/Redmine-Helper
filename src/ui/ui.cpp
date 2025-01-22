@@ -170,8 +170,8 @@ int RunUI()
     bool done = false;
     
     helper::WindowData windowData{};
-    windowData.set(helper::titleSimpleWindow, true);
-    windowData.set(helper::titleDemoWindow, false);
+    windowData.setBool(helper::titleSimpleWindow, true);
+    windowData.setBool(helper::titleDemoWindow, false);
 
 
     helper::WindowsApp winApp{.windowsData = windowData};

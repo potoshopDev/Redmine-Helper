@@ -3,6 +3,7 @@ project(RedmineHelper VERSION 1.0.0)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -26,13 +27,8 @@ source_group("Header files/Header" FILES ${HEADER})
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADER})
 
-if (MSVC)
-endif()
-
-
-
 find_package(nlohmann_json REQUIRED)
-find_package(GTest REQUIRED)
+find_package(gtest REQUIRED)
 find_package(cpr REQUIRED)
 find_package(tgbot REQUIRED)
 find_package(imgui REQUIRED)
@@ -41,16 +37,16 @@ find_package(DirectX-Headers REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json cpr::cpr tgbot::tgbot)
 
-set (TEST_SOURCES test/test.cpp)
-set (TEST_HEADER 
+ set (TEST_SOURCES test/test.cpp)
+ set (TEST_HEADER 
 	src/json_helper.h
 	src/resp_helper.h
 	src/app_helper.h
 )
-add_executable(${PROJECT_NAME}Test ${TEST_SOURCES} ${TEST_HEADER})
+ add_executable(${PROJECT_NAME}Test ${TEST_SOURCES} ${TEST_HEADER})
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Test)
-target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest cpr::cpr tgbot::tgbot)
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Test)
+ target_link_libraries(${PROJECT_NAME}Test nlohmann_json::nlohmann_json gtest::gtest cpr::cpr tgbot::tgbot)
 
 
 
@@ -78,5 +74,5 @@ source_group("Source files/private" FILES ${SOURCESG})
 source_group("Source files/public" FILES ${HEADERG})
 
 add_executable(${PROJECT_NAME}_imGUI WIN32 ${SOURCESG} ${HEADERG})
-target_link_libraries(${PROJECT_NAME}_imGUI nlohmann_json::nlohmann_json gtest::gtest cpr::cpr tgbot::tgbot imgui::imgui SDL2::SDL2main Microsoft::DirectX-Headers ${CONAN_LIBS} d3d11) 
+target_link_libraries(${PROJECT_NAME}_imGUI nlohmann_json::nlohmann_json cpr::cpr tgbot::tgbot imgui::imgui SDL2::SDL2main Microsoft::DirectX-Headers ${CONAN_LIBS} d3d11) 
 

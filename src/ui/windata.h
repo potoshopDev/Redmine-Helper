@@ -60,6 +60,17 @@ public:
     friend float getFloat(const WindowData& wd, const std::string& key) noexcept;
     friend std::string getString(const WindowData& wd, const std::string& key) noexcept;
     friend voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
+    template <typename T>
+    void _set(const std::string& key, const T& value)
+    {
+        _self->_set<T>(key, value);
+    }
+
+    template <typename T>
+    T _get(const std::string& key)
+    {
+        return _self->_get<T>(key);
+    }
 
 public:
     WindowData() : _self(std::make_unique<ObjectData>()) {}

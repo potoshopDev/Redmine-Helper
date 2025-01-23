@@ -2,6 +2,7 @@
 #include <print>
 #include "app_helper.h"
 
+
 int main()
 {
     std::setlocale(LC_ALL,"Russian");

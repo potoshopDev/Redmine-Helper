@@ -5,20 +5,26 @@ constexpr const char* titleSimpleWindow{"Простое окно"};
 
 namespace helper
 {
-
-    #include <string_view>
-template <typename T>
-class autoUpdater final
+autoUpdater<bool> madeAutoBool(WindowData& wd, const std::string_view key)
 {
-public:
-    T data;
-    autoUpdater(WindowData& wd, const std::string_view key) : _winData(wd), _key(key) { data = _winData._get<T>(_key.data()); }
-    ~autoUpdater() { _winData._set<T>(_key.data(), data); }
+    return {wd, key};
+}
 
-private:
-    WindowData& _winData{};
-    const std::string_view _key{};
-};
+autoUpdater<float> madeAutoFloat(WindowData& wd, const std::string_view key)
+{
+    return {wd, key};
+}
+
+autoUpdater<voidFunc> madeAutoFunc(WindowData& wd, const std::string_view key)
+{
+    return {wd, key};
+}
+
+autoUpdater<std::string> madeAutoString(WindowData& wd, const std::string_view key)
+{
+    return {wd, key};
+}
+
 void draw(const WindowFront& window, helper::WindowData& winData)
 {
     static bool s{true};
@@ -27,15 +33,15 @@ void draw(const WindowFront& window, helper::WindowData& winData)
         helper::setBool(winData, titleDemoWindow, true);
         s = false;
     }
-    ImGui::Begin(window.title.c_str());  // Создаём окно
-    window.contentRenderer();            // Отображаем содержимое окна
-    ImGui::End();                        // Завершаем отрисовку окна
+    ImGui::Begin(window.title.c_str());
+    window.contentRenderer();
+    ImGui::End();
 }
 
 void draw(DemoWindowFront& window, helper::WindowData& winData)
 {
-    autoUpdater<bool> showDemoWin{winData, titleDemoWindow};
-    if (showDemoWin.data) window.contentRenderer(showDemoWin.data);  // Отображаем содержимое окна
+    auto showDemoWin{madeAutoBool(winData, titleDemoWindow)};
+    if (showDemoWin.data) window.contentRenderer(showDemoWin.data);
 }
 
 void setBool(WindowData& wd, const std::string& key, const bool value) noexcept

@@ -44,7 +44,6 @@ std::optional<cpr::Response> get_issue_relation(std::string_view issueId, std::s
 helper::issues_array find_issues(const helper::issue_filters& filters)
 {
     const auto key{helper::loadApiKey(helper::API_PATH)};
-    std::println("{}", *key);
     if (helper::is_key_bad(key)) return {};
 
     const auto url{__get_url_find(filters)};

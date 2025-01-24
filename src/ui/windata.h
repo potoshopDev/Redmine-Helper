@@ -7,12 +7,20 @@
 #include <unordered_map>
 #include <variant>
 #include <memory>
+#include <string_view>
+#include <concepts>
 
 namespace helper
 {
 
 using voidFunc = std::function<void()>;
 using DataVariant = std::variant<bool, float, voidFunc, std::string>;
+
+template <typename T>
+concept AllowedType = std::same_as<T, bool> ||
+                      std::same_as<T, float> ||
+                      std::same_as<T, voidFunc> ||
+                      std::same_as<T, std::string>;
 
 class WindowData;
 void setBool(WindowData& wd, const std::string& key, const bool value) noexcept;
@@ -25,6 +33,9 @@ float getFloat(const WindowData& wd, const std::string& key) noexcept;
 std::string getString(const WindowData& wd, const std::string& key) noexcept;
 voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
 
+template <AllowedType T>
+class autoUpdater;
+
 class WindowData final
 {
     class ObjectData final
@@ -32,13 +43,13 @@ class WindowData final
         std::unordered_map<std::string, DataVariant> data;
 
     public:
-        template <typename T>
+        template <AllowedType T>
         void _set(const std::string& key, const T& value)
         {
             data[key] = value;
         }
 
-        template <typename T>
+        template <AllowedType T>
         T _get(const std::string& key)
         {
             return std::get<T>(data[key]);
@@ -60,17 +71,9 @@ public:
     friend float getFloat(const WindowData& wd, const std::string& key) noexcept;
     friend std::string getString(const WindowData& wd, const std::string& key) noexcept;
     friend voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
-    template <typename T>
-    void _set(const std::string& key, const T& value)
-    {
-        _self->_set<T>(key, value);
-    }
 
-    template <typename T>
-    T _get(const std::string& key)
-    {
-        return _self->_get<T>(key);
-    }
+	template <AllowedType T>
+    friend class autoUpdater;
 
 public:
     WindowData() : _self(std::make_unique<ObjectData>()) {}
@@ -82,6 +85,25 @@ public:
         return *this;
     }
 };
+
+template <AllowedType T>
+class autoUpdater final
+{
+public:
+    T data;
+    autoUpdater(WindowData& wd, const std::string_view key) : _winData(wd), _key(key) { data = _winData._self->_get<T>(_key.data()); }
+    void Save() const noexcept { _winData._self->_set<T>(_key.data(), data); };
+    ~autoUpdater() { Save(); }
+
+private:
+    WindowData& _winData{};
+    const std::string_view _key{};
+};
+
+autoUpdater<bool> madeAutoBool(WindowData& wd, const std::string_view key);
+autoUpdater<float> madeAutoFloat(WindowData& wd, const std::string_view key);
+autoUpdater<voidFunc> madeAutoFunc(WindowData& wd, const std::string_view key);
+autoUpdater<std::string> madeAutoString(WindowData& wd, const std::string_view key);
 
 struct WindowFront
 {

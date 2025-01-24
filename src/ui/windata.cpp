@@ -60,6 +60,24 @@ void setFunction(WindowData& wd, const std::string& key, voidFunc value) noexcep
 {
     wd._self->_set(key, value);
 }
+
+void addBool(WindowData& wd, const std::string& key, const bool value) noexcept
+{
+    wd._self->_add(key, value);
+}
+void addFloat(WindowData& wd, const std::string& key, const float value) noexcept
+{
+    wd._self->_add(key, value);
+}
+void addString(WindowData& wd, const std::string& key, const std::string& value) noexcept
+{
+    wd._self->_add(key, value);
+}
+void addFunction(WindowData& wd, const std::string& key, voidFunc value) noexcept
+{
+    wd._self->_add(key, value);
+}
+
 bool getBool(const WindowData& wd, const std::string& key) noexcept
 {
     return wd._self->_get<bool>(key);

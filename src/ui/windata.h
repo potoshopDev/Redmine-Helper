@@ -28,6 +28,11 @@ void setFloat(WindowData& wd, const std::string& key, const float value) noexcep
 void setString(WindowData& wd, const std::string& key, const std::string& value) noexcept;
 void setFunction(WindowData& wd, const std::string& key, voidFunc value) noexcept;
 
+void addBool(WindowData& wd, const std::string& key, const bool value) noexcept;
+void addFloat(WindowData& wd, const std::string& key, const float value) noexcept;
+void addString(WindowData& wd, const std::string& key, const std::string& value) noexcept;
+void addFunction(WindowData& wd, const std::string& key, voidFunc value) noexcept;
+
 bool getBool(const WindowData& wd, const std::string& key) noexcept;
 float getFloat(const WindowData& wd, const std::string& key) noexcept;
 std::string getString(const WindowData& wd, const std::string& key) noexcept;
@@ -50,6 +55,12 @@ class WindowData final
         }
 
         template <AllowedType T>
+        void _add(const std::string& key, const T& value)
+        {
+            data.emplace(key, value);
+        }
+
+        template <AllowedType T>
         T _get(const std::string& key)
         {
             return std::get<T>(data[key]);
@@ -66,6 +77,11 @@ public:
     friend void setFloat(WindowData& wd, const std::string& key, const float value) noexcept;
     friend void setString(WindowData& wd, const std::string& key, const std::string& value) noexcept;
     friend void setFunction(WindowData& wd, const std::string& key, voidFunc value) noexcept;
+
+    friend void addBool(WindowData& wd, const std::string& key, const bool value) noexcept;
+    friend void addFloat(WindowData& wd, const std::string& key, const float value) noexcept;
+    friend void addString(WindowData& wd, const std::string& key, const std::string& value) noexcept;
+    friend void addFunction(WindowData& wd, const std::string& key, voidFunc value) noexcept;
 
     friend bool getBool(const WindowData& wd, const std::string& key) noexcept;
     friend float getFloat(const WindowData& wd, const std::string& key) noexcept;

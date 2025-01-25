@@ -47,7 +47,7 @@ class GraphicsDevice final
         virtual inline ID3D11DeviceContext* GetDeviceContext() const noexcept override { return g_pd3dDeviceContext.Get(); }
         virtual inline IDXGISwapChain* GetSwapChain() const noexcept override { return g_pSwapChain.Get(); }
         virtual inline ID3D11RenderTargetView* GetRenderTarget() const noexcept override { return g_mainRenderTargetView.Get(); }
-        virtual inline bool is_Ready() const noexcept
+        virtual inline bool is_Ready() const noexcept override
         {
             return (g_pd3dDevice && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView);
         }
@@ -148,7 +148,7 @@ void EventProcessing(GraphicsDevice& device, SDL_Window& window, bool& done);
 void StartFrame();
 void Rendering(GraphicsDevice& device, ImVec4& clearColor);
 }  // namespace
-
+#include <format>
 namespace ImGui
 {
 int RunUI()
@@ -168,15 +168,17 @@ int RunUI()
 
     // Main loop
     bool done = false;
-    
+
     helper::WindowData windowData{};
     helper::setBool(windowData, helper::titleSimpleWindow, true);
     helper::setBool(windowData, helper::titleDemoWindow, true);
 
-
-    helper::WindowsApp winApp{.windowsData = windowData};
-    winApp.emplace_back(helper::demoWindow);
-    winApp.emplace_back(helper::simpleWindow);
+    helper::WindowsApp winApp{};
+    for (auto i{0}; i < 1000; ++i)
+    {
+        helper::SimpleWindow sw(windowData, std::format("SimpleWindow{}", i));
+        winApp.emplace_back(sw);
+    }
 
     while (!done)
     {
@@ -192,7 +194,6 @@ int RunUI()
         {
         }
 
-        // 3. Show another simple window.
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window);  // Pass a pointer to our bool variable (the window will have a closing
@@ -206,6 +207,7 @@ int RunUI()
             ImGui::Begin("New windows");
             ImGui::Text("этот текст на русском");
             ImGui::Text("������");
+            ImGui::Text("Zdrassiii, Hello world!");
             ImGui::End();
         }
 

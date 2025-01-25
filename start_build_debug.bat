@@ -1,5 +1,3 @@
-call conan install . --output-folder=build --profile=profile_debug --profile:b=profile_debug
 call cd build
-call cmake ..  -G "Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake --fresh
-call cmake --build .
+call cmake --build . --target RedmineHelper_imGui 
 call cd ..

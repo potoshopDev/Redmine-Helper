@@ -3,12 +3,12 @@
 #include <functional>
 #include <string>
 #include <imgui.h>
-#include <iostream>
 #include <unordered_map>
 #include <variant>
 #include <memory>
 #include <string_view>
 #include <concepts>
+#include <imgui.h>
 
 namespace helper
 {
@@ -17,10 +17,7 @@ using voidFunc = std::function<void()>;
 using DataVariant = std::variant<bool, float, voidFunc, std::string>;
 
 template <typename T>
-concept AllowedType = std::same_as<T, bool> ||
-                      std::same_as<T, float> ||
-                      std::same_as<T, voidFunc> ||
-                      std::same_as<T, std::string>;
+concept AllowedType = std::same_as<T, bool> || std::same_as<T, float> || std::same_as<T, voidFunc> || std::same_as<T, std::string>;
 
 class WindowData;
 void setBool(WindowData& wd, const std::string& key, const bool value) noexcept;
@@ -88,7 +85,7 @@ public:
     friend std::string getString(const WindowData& wd, const std::string& key) noexcept;
     friend voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
 
-	template <AllowedType T>
+    template <AllowedType T>
     friend class autoUpdater;
 
 public:
@@ -107,24 +104,35 @@ class autoUpdater final
 {
 public:
     T data;
-    autoUpdater(WindowData& wd, const std::string_view key) : _winData(wd), _key(key) { data = _winData._self->_get<T>(_key.data()); }
-    void Save() const noexcept { _winData._self->_set<T>(_key.data(), data); };
+    autoUpdater(WindowData& wd, const std::string key) : _winData(wd), _key(key) { data = _winData._self->_get<T>(_key); }
+    void Save() noexcept { _winData._self->_set<T>(_key, data); };
     ~autoUpdater() { Save(); }
 
 private:
-    WindowData& _winData{};
-    const std::string_view _key{};
+    WindowData& _winData;
+    const std::string _key{};
 };
 
-autoUpdater<bool> madeAutoBool(WindowData& wd, const std::string_view key);
-autoUpdater<float> madeAutoFloat(WindowData& wd, const std::string_view key);
-autoUpdater<voidFunc> madeAutoFunc(WindowData& wd, const std::string_view key);
-autoUpdater<std::string> madeAutoString(WindowData& wd, const std::string_view key);
+autoUpdater<bool> madeAutoBool(WindowData& wd, const std::string key);
+autoUpdater<float> madeAutoFloat(WindowData& wd, const std::string key);
+autoUpdater<voidFunc> madeAutoFunc(WindowData& wd, const std::string key);
+autoUpdater<std::string> madeAutoString(WindowData& wd, const std::string key);
 
-struct WindowFront
+std::string getObjName(std::string_view title, std::string_view nameObj) noexcept;
+
+class WindowFront
 {
-    std::string title;                      // Заголовок окна
-    std::function<void()> contentRenderer;  // Функция для отрисовки содержимого окна
+protected:
+    WindowData& _wd;
+    virtual void RegObjName() noexcept;
+
+public:
+    WindowFront(WindowData& wd);
+    WindowFront(WindowData& wd, const std::string_view title);
+
+    virtual void Run() noexcept {};
+    virtual ~WindowFront() = default;
+    const std::string_view _title{"new window"};
 };
 
 struct DemoWindowFront
@@ -133,7 +141,7 @@ struct DemoWindowFront
     std::function<void(bool&)> contentRenderer;  // Функция для отрисовки содержимого окна
 };
 
-void draw(const WindowFront& window, helper::WindowData& winData);
-void draw(DemoWindowFront& window, helper::WindowData& winData);
+void draw(WindowFront* window);
+void draw(DemoWindowFront& window);
 
 }  // namespace helper

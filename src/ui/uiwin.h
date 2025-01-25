@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -11,13 +10,16 @@
 namespace helper
 {
 
+class WindowsDraw;
+void draw(const WindowsDraw& wd);
+
 class WindowsDraw
 {
     struct IWindowsDraw
     {
         virtual ~IWindowsDraw() = default;
         virtual std::unique_ptr<IWindowsDraw> copy_() const = 0;
-        virtual void draw_(helper::WindowData& winData) = 0;
+        virtual inline void draw_() = 0;
     };
 
     template <typename T>
@@ -26,7 +28,7 @@ class WindowsDraw
         T data_;
         DrawableObject(T x) : data_(std::move(x)) {}
         std::unique_ptr<IWindowsDraw> copy_() const override { return std::make_unique<DrawableObject>(*this); }
-        void draw_(helper::WindowData& winData) override;
+        virtual inline void draw_() override;
     };
 
     std::unique_ptr<IWindowsDraw> self_;
@@ -47,14 +49,13 @@ public:
     }
 
 public:
-    friend void draw(const WindowsDraw& wd, helper::WindowData& winData) { wd.self_->draw_(winData); }
+    friend void draw(const WindowsDraw& wd);
 };
 
 using WindowsStack = std::vector<WindowsDraw>;
 struct WindowsApp
 {
     WindowsStack windowsStack{};
-    helper::WindowData windowsData{};
 
     template <typename T>
     void emplace_back(T& obj)
@@ -66,9 +67,9 @@ struct WindowsApp
 void draw(WindowsApp& app);
 
 template <typename T>
-inline void WindowsDraw::DrawableObject<T>::draw_(helper::WindowData& winData)
+inline void WindowsDraw::DrawableObject<T>::draw_()
 {
-    draw(data_, winData);
+    draw(&data_);
 }
 
 }  // namespace helper

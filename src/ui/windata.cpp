@@ -1,47 +1,41 @@
 #include "windata.h"
+#include "win.h"
+#include <format>
 
 constexpr const char* titleDemoWindow{"Демо окно"};
 constexpr const char* titleSimpleWindow{"Простое окно"};
 
 namespace helper
 {
-autoUpdater<bool> madeAutoBool(WindowData& wd, const std::string_view key)
+autoUpdater<bool> madeAutoBool(WindowData& wd, const std::string key)
 {
     return {wd, key};
 }
 
-autoUpdater<float> madeAutoFloat(WindowData& wd, const std::string_view key)
+autoUpdater<float> madeAutoFloat(WindowData& wd, const std::string key)
 {
     return {wd, key};
 }
 
-autoUpdater<voidFunc> madeAutoFunc(WindowData& wd, const std::string_view key)
+autoUpdater<voidFunc> madeAutoFunc(WindowData& wd, const std::string key)
 {
     return {wd, key};
 }
 
-autoUpdater<std::string> madeAutoString(WindowData& wd, const std::string_view key)
+autoUpdater<std::string> madeAutoString(WindowData& wd, const std::string key)
 {
     return {wd, key};
 }
 
-void draw(const WindowFront& window, helper::WindowData& winData)
+void draw(WindowFront* window)
 {
-    static bool s{true};
-    if (s)
-    {
-        helper::setBool(winData, titleDemoWindow, true);
-        s = false;
-    }
-    ImGui::Begin(window.title.c_str());
-    window.contentRenderer();
-    ImGui::End();
+    if (window) window->Run();
 }
 
-void draw(DemoWindowFront& window, helper::WindowData& winData)
+void draw(DemoWindowFront& window)
 {
-    auto showDemoWin{madeAutoBool(winData, titleDemoWindow)};
-    if (showDemoWin.data) window.contentRenderer(showDemoWin.data);
+    // auto showDemoWin{madeAutoBool(winData, titleDemoWindow)};
+    // if (showDemoWin.data) window.contentRenderer(showDemoWin.data);
 }
 
 void setBool(WindowData& wd, const std::string& key, const bool value) noexcept
@@ -93,5 +87,23 @@ std::string getString(const WindowData& wd, const std::string& key) noexcept
 voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept
 {
     return wd._self->_get<voidFunc>(key);
+}
+WindowFront::WindowFront(WindowData& wd) : _wd(wd)
+{
+    RegObjName();
+}
+WindowFront::WindowFront(WindowData& wd, const std::string_view title) : _wd(wd), _title(title)
+{
+    RegObjName();
+}
+void WindowFront::RegObjName() noexcept
+{
+    addString(_wd, getObjName(_title, ""), _title.data());
+    addBool(_wd, getObjName(_title, _title), true);
+}
+
+std::string getObjName(std::string_view title, std::string_view nameObj) noexcept
+{
+    return std::format("{}_{}", title, nameObj);
 }
 }  // namespace helper

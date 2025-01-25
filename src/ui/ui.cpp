@@ -178,11 +178,11 @@ int RunUI()
     helper::setBool(windowData, helper::titleDemoWindow, true);
 
     helper::WindowsApp winApp{};
-    for (auto i{0}; i < 1000; ++i)
-    {
-        helper::SimpleWindow sw(windowData, std::format("SimpleWindow{}", i));
-        winApp.emplace_back(sw);
-    }
+    helper::SimpleWindow sw{windowData, "SimpleWindow"};
+    helper::MainWindow mw{windowData, "MainWindow"};
+
+    winApp.emplace_back(sw);
+    winApp.emplace_back(mw);
 
     while (!done)
     {
@@ -320,7 +320,7 @@ std::optional<Devices> CreateDeviceD3D(HWND hWnd)
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
     UINT createDeviceFlags = 0;
-    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    // createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[4] = {
         D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_12_0};
@@ -331,12 +331,12 @@ std::optional<Devices> CreateDeviceD3D(HWND hWnd)
 
     HRESULT hr;
 
-    if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd,
-            &SwapChain, &Device, &featureLevel, &Context) != S_OK)
-        if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_WARP, NULL, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd,
-                &SwapChain, &Device, nullptr, &Context) != S_OK)
-            if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray),
-                    D3D11_SDK_VERSION, &sd, &SwapChain, &Device, &featureLevel, &Context) != S_OK)
+    if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray,
+            ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd, &SwapChain, &Device, &featureLevel, &Context) != S_OK)
+        if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_WARP, NULL, createDeviceFlags, featureLevelArray,
+                ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd, &SwapChain, &Device, nullptr, &Context) != S_OK)
+            if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, createDeviceFlags, featureLevelArray,
+                    ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd, &SwapChain, &Device, &featureLevel, &Context) != S_OK)
             {
                 hr = (D3D11CreateDeviceAndSwapChain(nullptr,
                     D3D_DRIVER_TYPE_REFERENCE,  // Драйвер эмуляции
@@ -345,7 +345,7 @@ std::optional<Devices> CreateDeviceD3D(HWND hWnd)
 
                 if (FAILED(hr))
                 {
-					LogHRESULT(hr);
+                    LogHRESULT(hr);
                     return std::nullopt;
                 }
             }

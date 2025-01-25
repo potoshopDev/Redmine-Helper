@@ -40,3 +40,33 @@ void helper::SimpleWindow::Run() noexcept
         ImGui::End();
     }
 }
+
+namespace helper
+{
+MainWindow::MainWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
+{
+    RegObjName();
+}
+
+void MainWindow::RegObjName() noexcept {
+
+    helper::addString(_wd, helper::getObjName(_title, bButtonSettings), bButtonSettings.data());
+
+}
+
+void MainWindow::Run() noexcept
+{
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+    auto buttonSettings {helper::madeAutoString(_wd, helper::getObjName(_title, bButtonSettings))};
+
+    ImGui::Begin("Main Window", NULL,
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    if (ImGui::Button(buttonSettings.data.c_str())) {}
+
+    ImGui::End();
+}
+}  // namespace helper

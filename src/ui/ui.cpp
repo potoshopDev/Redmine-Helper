@@ -13,6 +13,10 @@
 #include "ui/uiwin.h"
 #include "ui/win.h"
 
+#include <windows.h>
+#include <iostream>
+#include <fstream>
+
 namespace
 {
 using Microsoft::WRL::ComPtr;
@@ -149,6 +153,7 @@ void StartFrame();
 void Rendering(GraphicsDevice& device, ImVec4& clearColor);
 }  // namespace
 #include <format>
+
 namespace ImGui
 {
 int RunUI()
@@ -161,7 +166,6 @@ int RunUI()
 
     SetupImGui(*window, DirectXDevice);
 
-    // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clearColor = ImVec4(0.35f, 0.35f, 0.35f, 1.f);
@@ -261,7 +265,41 @@ void StartFrame()
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 }
+void LogHRESULT(const HRESULT hr, const std::string& filename = "log.log")
+{
+    // Открываем файл в режиме добавления
+    std::ofstream logFile(filename, std::ios::app);
+    if (!logFile.is_open())
+    {
+        std::cerr << "Failed to open log file: " << filename << std::endl;
+        return;
+    }
 
+    // Получаем текстовое описание HRESULT
+    char messageBuffer[512];
+    DWORD messageLength = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, hr,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), messageBuffer, sizeof(messageBuffer), nullptr);
+
+    if (messageLength == 0)
+    {
+        logFile << "Failed to get error message for HRESULT: 0x" << std::hex << hr << std::dec << std::endl;
+    }
+    else
+    {
+        // Удаляем символы новой строки и возврата каретки из сообщения
+        std::string message(messageBuffer);
+        size_t pos;
+        while ((pos = message.find_first_of("\r\n")) != std::string::npos)
+        {
+            message.erase(pos, 1);
+        }
+
+        // Записываем HRESULT и его описание в файл
+        logFile << "HRESULT: 0x" << std::hex << hr << std::dec << " - " << message << std::endl;
+    }
+
+    logFile.close();
+}
 std::optional<Devices> CreateDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
@@ -282,20 +320,35 @@ std::optional<Devices> CreateDeviceD3D(HWND hWnd)
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
     UINT createDeviceFlags = 0;
-    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
-    const D3D_FEATURE_LEVEL featureLevelArray[2] = {
-        D3D_FEATURE_LEVEL_11_0,
-        D3D_FEATURE_LEVEL_10_0,
-    };
+    const D3D_FEATURE_LEVEL featureLevelArray[4] = {
+        D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_12_0};
 
     ID3D11Device* Device{};
     ID3D11DeviceContext* Context{};
     IDXGISwapChain* SwapChain{};
 
-    if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd,
+    HRESULT hr;
+
+    if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd,
             &SwapChain, &Device, &featureLevel, &Context) != S_OK)
-        return std::nullopt;
+        if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_WARP, NULL, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd,
+                &SwapChain, &Device, nullptr, &Context) != S_OK)
+            if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray),
+                    D3D11_SDK_VERSION, &sd, &SwapChain, &Device, &featureLevel, &Context) != S_OK)
+            {
+                hr = (D3D11CreateDeviceAndSwapChain(nullptr,
+                    D3D_DRIVER_TYPE_REFERENCE,  // Драйвер эмуляции
+                    nullptr, createDeviceFlags, featureLevelArray, ARRAYSIZE(featureLevelArray), D3D11_SDK_VERSION, &sd, &SwapChain,
+                    &Device, nullptr, &Context));
+
+                if (FAILED(hr))
+                {
+					LogHRESULT(hr);
+                    return std::nullopt;
+                }
+            }
 
     return std::tuple(Device, Context, SwapChain);
 }
@@ -315,7 +368,7 @@ auto InitializeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
 {
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     return std::unique_ptr<SDL_Window, decltype(&SDLClear)>(
-        SDL_CreateWindow("Redmine Helper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags), &SDLClear);
+        SDL_CreateWindow("Redmine Helper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, window_flags), &SDLClear);
 }
 
 HWND GetHWND(SDL_Window* window)

@@ -1,9 +1,5 @@
 #include "windata.h"
-#include "win.h"
 #include <format>
-
-constexpr const char* titleDemoWindow{"Демо окно"};
-constexpr const char* titleSimpleWindow{"Простое окно"};
 
 namespace helper
 {

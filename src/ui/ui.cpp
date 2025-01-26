@@ -152,7 +152,6 @@ void EventProcessing(GraphicsDevice& device, SDL_Window& window, bool& done);
 void StartFrame();
 void Rendering(GraphicsDevice& device, ImVec4& clearColor);
 }  // namespace
-#include <format>
 
 namespace ImGui
 {
@@ -166,7 +165,6 @@ int RunUI()
 
     SetupImGui(*window, DirectXDevice);
 
-    bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clearColor = ImVec4(0.35f, 0.35f, 0.35f, 1.f);
 

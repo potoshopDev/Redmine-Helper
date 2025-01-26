@@ -1,7 +1,9 @@
 #include "win.h"
 #include <imgui.h>
 
-helper::SimpleWindow::SimpleWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
+namespace helper
+{
+SimpleWindow::SimpleWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
 {
     RegObjName();
 }
@@ -41,8 +43,6 @@ void helper::SimpleWindow::Run() noexcept
     }
 }
 
-namespace helper
-{
 MainWindow::MainWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
 {
     RegObjName();

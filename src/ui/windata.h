@@ -34,6 +34,7 @@ bool getBool(const WindowData& wd, const std::string& key) noexcept;
 float getFloat(const WindowData& wd, const std::string& key) noexcept;
 std::string getString(const WindowData& wd, const std::string& key) noexcept;
 voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
+std::string getObjName(std::string_view title, std::string_view nameObj) noexcept;
 
 template <AllowedType T>
 class autoUpdater;
@@ -42,9 +43,9 @@ class WindowData final
 {
     class ObjectData final
     {
+    public:
         std::unordered_map<std::string, DataVariant> data;
 
-    public:
         template <AllowedType T>
         void _set(const std::string& key, const T& value)
         {
@@ -84,6 +85,7 @@ public:
     friend float getFloat(const WindowData& wd, const std::string& key) noexcept;
     friend std::string getString(const WindowData& wd, const std::string& key) noexcept;
     friend voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
+    friend void SaveToFile(const helper::WindowData& data, const std::string& filename);
 
     template <AllowedType T>
     friend class autoUpdater;

@@ -10,12 +10,16 @@
 #include <optional>
 #include <tuple>
 
+#include "ui/save.h"
 #include "ui/uiwin.h"
 #include "ui/win.h"
 
 #include <windows.h>
 #include <iostream>
 #include <fstream>
+
+#include "save.h"
+#include "ui/windata.h"
 
 namespace
 {
@@ -165,19 +169,16 @@ int RunUI()
 
     SetupImGui(*window, DirectXDevice);
 
-    bool show_another_window = false;
     ImVec4 clearColor = ImVec4(0.35f, 0.35f, 0.35f, 1.f);
 
     // Main loop
     bool done = false;
 
-    helper::WindowData windowData{};
-    helper::setBool(windowData, helper::titleSimpleWindow, true);
-    helper::setBool(windowData, helper::titleDemoWindow, true);
+    helper::WindowData windowData{helper::LoadFromFile(helper::nameFileSave)};
 
     helper::WindowsApp winApp{};
-    helper::SimpleWindow sw{windowData, "SimpleWindow"};
-    helper::MainWindow mw{windowData, "MainWindow"};
+    helper::SettingsWindow sw{windowData, helper::titleSettingsWindow};
+    helper::MainWindow mw{windowData, helper::titleMainWindow};
 
     winApp.emplace_back(sw);
     winApp.emplace_back(mw);
@@ -187,34 +188,20 @@ int RunUI()
         EventProcessing(DirectXDevice, *window, done);
         StartFrame();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about
-        // Dear ImGui!). if (show_demo_window) 	ImGui::ShowDemoWindow(&show_demo_window);
-
         helper::draw(winApp);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        auto bNeedSave{helper::madeAutoBool(windowData, helper::getObjName(helper::saveButtonName, helper::saveButtonName))};
+        if (bNeedSave.data)
         {
-        }
-
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);  // Pass a pointer to our bool variable (the window will have a closing
-                                                                   // button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me")) show_another_window = false;
-            ImGui::End();
-        }
-
-        {
-            ImGui::Begin("New windows");
-            ImGui::Text("этот текст на русском");
-            ImGui::Text("������");
-            ImGui::Text("Zdrassiii, Hello world!");
-            ImGui::End();
+            bNeedSave.data = false;
+            bNeedSave.Save();
+            helper::SaveToFile(windowData, helper::nameFileSave);
         }
 
         Rendering(DirectXDevice, clearColor);
     }
+
+    helper::SaveToFile(windowData, helper::nameFileSave);
 
     SHutdown();
     return std::to_underlying(RETURN_CODE::SUCCESED);

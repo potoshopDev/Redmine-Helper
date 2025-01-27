@@ -95,7 +95,7 @@ WindowFront::WindowFront(WindowData& wd, const std::string_view title) : _wd(wd)
 void WindowFront::RegObjName() noexcept
 {
     addString(_wd, getObjName(_title, ""), _title.data());
-    addBool(_wd, getObjName(_title, _title), true);
+    addBool(_wd, getObjName(_title, _title), false);
 }
 
 std::string getObjName(std::string_view title, std::string_view nameObj) noexcept

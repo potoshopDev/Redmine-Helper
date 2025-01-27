@@ -55,6 +55,7 @@ set (SOURCESG
 	src/main_gui.cpp
 	src/ui/ui.cpp
 	src/ui/uiwin.cpp
+	src/ui/save.cpp
 	build/backends/imgui_impl_sdl.cpp
 	build/backends/imgui_impl_dx11.cpp
 	src/ui/windata.cpp
@@ -67,6 +68,7 @@ set (HEADERG
 	src/ui/windata.h
 	src/ui/win.h
 	src/ui/uiwin.h
+	src/ui/save.h
 	build/backends/imgui_impl_sdl.h
 	build/backends/imgui_impl_dx11.h
 )

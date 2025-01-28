@@ -106,7 +106,7 @@ class autoUpdater final
 {
 public:
     T data;
-    autoUpdater(WindowData& wd, const std::string key) : _winData(wd), _key(key) { data = _winData._self->_get<T>(_key); }
+    autoUpdater(WindowData& wd, const std::string key) : _winData(wd), _key(key) {  data = _winData._self->_get<T>(_key); }
     void Save() noexcept { _winData._self->_set<T>(_key, data); };
     ~autoUpdater() { Save(); }
 
@@ -126,7 +126,7 @@ class WindowFront
 {
 protected:
     WindowData& _wd;
-    virtual void RegObjName() noexcept;
+    virtual void DefaultSettings() noexcept;
 
 public:
     WindowFront(WindowData& wd);

@@ -18,7 +18,6 @@
 #include <iostream>
 #include <fstream>
 
-#include "save.h"
 #include "ui/windata.h"
 
 namespace
@@ -179,9 +178,11 @@ int RunUI()
     helper::WindowsApp winApp{};
     helper::SettingsWindow sw{windowData, helper::titleSettingsWindow};
     helper::MainWindow mw{windowData, helper::titleMainWindow};
+    helper::IssueWindow iw{windowData, helper::titleIssueWindow};
 
     winApp.emplace_back(sw);
     winApp.emplace_back(mw);
+    winApp.emplace_back(iw);
 
     while (!done)
     {

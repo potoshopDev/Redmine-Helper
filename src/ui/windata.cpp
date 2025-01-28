@@ -86,13 +86,13 @@ voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept
 }
 WindowFront::WindowFront(WindowData& wd) : _wd(wd)
 {
-    RegObjName();
+    DefaultSettings();
 }
 WindowFront::WindowFront(WindowData& wd, const std::string_view title) : _wd(wd), _title(title)
 {
-    RegObjName();
+    DefaultSettings();
 }
-void WindowFront::RegObjName() noexcept
+void WindowFront::DefaultSettings() noexcept
 {
     addString(_wd, getObjName(_title, ""), _title.data());
     addBool(_wd, getObjName(_title, _title), false);

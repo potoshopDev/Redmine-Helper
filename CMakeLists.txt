@@ -60,6 +60,9 @@ set (SOURCESG
 	build/backends/imgui_impl_dx11.cpp
 	src/ui/windata.cpp
 	src/ui/win.cpp
+	src/json_helper.cpp
+	src/resp_helper.cpp
+	src/app_helper.cpp
 )
 set (HEADERG 
 	src/json_helper.h

@@ -8,7 +8,6 @@ namespace helper
 
 constexpr const std::chrono::minutes sleep_five_minutes{5};
 std::string __get_url_find(const helper::issue_filters& filters);
-helper::issues_array print_err_response_find(cpr::Response& response, const std::string_view url);
 std::optional<cpr::Response> get_issue_relation(std::string_view issueId, std::string_view key);
 
 helper::issues_array find_issues(const helper::issue_filters& filters)
@@ -19,7 +18,7 @@ helper::issues_array find_issues(const helper::issue_filters& filters)
     const auto url{__get_url_find(filters)};
     auto response{helper::get_response_k(url, *key)};
 
-    if (helper::is_status_code_nook(response)) return print_err_response_find(response, url);
+    if (helper::is_status_code_nook(response)) return print_err_response_find<helper::issues_array>(response, url);
 
     const auto issues = nlohmann::json::parse(response.text);
     helper::issues_array return_issues{};
@@ -41,6 +40,49 @@ helper::issues_array find_issues(const helper::issue_filters& filters)
     return return_issues;
 }
 
+helper::issues_vec filter_issues(const helper::issue_filters& filters)
+{
+    const auto key{helper::loadApiKey(helper::API_PATH)};
+    if (helper::is_key_bad(key)) return {};
+
+    const auto url{__get_url_find(filters)};
+    auto response{helper::get_response_k(url, *key)};
+
+    if (helper::is_status_code_nook(response)) return print_err_response_find<helper::issues_vec>(response, url);
+
+    const auto issues = nlohmann::json::parse(response.text);
+    helper::issues_vec return_issues{};
+
+    for (const auto& issue : issues[helper::issues])
+    {
+        auto issueId{std::to_string(issue[helper::id].get<int>())};
+        const auto response{get_issue_relation(issueId, *key)};
+        if (!response) continue;
+
+        const auto relationsData = nlohmann::json::parse(response->text);
+
+        if (filters.is_any_relations)
+            if (relationsData[helper::relations].is_array() && !relationsData[helper::relations].empty()) continue;
+
+        helper::issueData tmpData{
+            .id = issueId,
+            .subject = issue.contains(helper::subject)?issue[helper::subject]:"",
+            .description = issue.contains(helper::description)?issue[helper::description]:"",
+            .project = issue.contains(helper::project)?issue[helper::project][helper::name]: "",
+            .status1 = issue.contains(helper::status)?issue[helper::status][helper::name]: "",
+            .tracker = issue.contains(helper::tracker)?issue[helper::tracker][helper::name]:"",
+            .priority = issue.contains(helper::priority)?issue[helper::priority][helper::name]: "",
+            .author = issue.contains(helper::author)?issue[helper::author][helper::name]: "",
+            .assigned_to = issue.contains(helper::assigned_to) ? issue[helper::assigned_to][helper::name]: "" ,
+            .category = issue.contains(helper::category) ?issue[helper::category][helper::name]: "" ,
+            .fixed_version = issue.contains(helper::fixed_version)?issue[helper::fixed_version][helper::name]:""};
+
+        return_issues.emplace_back(tmpData);
+    }
+
+    return return_issues;
+}
+
 std::optional<cpr::Response> get_issue_relation(std::string_view issueId, std::string_view key)
 {
     const auto relationsURL{std::format(helper::fmt_relation_issue_url, helper::REDMINE_URL, issueId)};
@@ -53,12 +95,6 @@ std::optional<cpr::Response> get_issue_relation(std::string_view issueId, std::s
     }
 
     return response;
-}
-
-helper::issues_array print_err_response_find(cpr::Response& response, const std::string_view url)
-{
-    std::println(msg_hlp::err_response_find, response.status_code, url);
-    return {};
 }
 
 std::string __get_url_find(const helper::issue_filters& filters)

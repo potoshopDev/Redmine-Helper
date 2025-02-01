@@ -1,6 +1,9 @@
 #pragma once
 
 #include "windata.h"
+#include "app_helper.h"
+#include "resp_helper.h"
+#include <vector>
 
 namespace helper
 {
@@ -51,6 +54,13 @@ protected:
     const std::string_view bButtonPress{"ButtonOK"};
     const std::string_view fSlide{"slide"};
     const std::string_view fCounter{"counter"};
+    helper::issues_vec issues{};
+
+    const helper::issue_filters test_filters{
+        .issue = {{helper::project_id, helper::projectKsup}, {helper::status_id, helper::status_inprogress}},
+        .relations = {},
+        .is_any_relations = true,
+    };
 
 public:
     IssueWindow(WindowData& wd, const std::string_view title);

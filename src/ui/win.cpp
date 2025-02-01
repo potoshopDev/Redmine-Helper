@@ -1,6 +1,7 @@
 #include "win.h"
 #include "ui/win.h"
 #include <imgui.h>
+#include <string>
 
 namespace helper
 {
@@ -129,7 +130,7 @@ void helper::SettingsWindow ::Run() noexcept
 //////////////////////////////////////////////////
 /// IssueWindow
 //////////////////////////////////////////////////
-IssueWindow::IssueWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
+IssueWindow::IssueWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title), issues(helper::filter_issues(test_filters))
 {
     DefaultSettings();
 }
@@ -153,32 +154,41 @@ void IssueWindow::Run() noexcept
 
     if (bShowWindow.data)
     {
+        const char* items[] = {"Опция 1", "Опция 2"};
+        static std::vector<int> selected_items(issues.size(), 0);
+        // if (selected_items.size() != issues.size()) selected_items.resize(issues.size());
+
         ImGui::Begin(_title.data(), &bShowWindow.data);
-        if (ImGui::Button(helper::checkIssueButtonName)) bCheckButton.data = true;
-
-        for (int i = 0; i < 10; ++i)  // Цикл для создания 10 строк
         {
-            ImGui::Text("ID: %d", i);                                  // Выводим ID
-            ImGui::Text("Описание: Краткое описание элемента %d", i);  // Выводим описание
 
-            const char* items[] = {"Опция 1", "Опция 2"};
-            static int selected_item = 0;  // Хранит выбранный элемент
+            if (ImGui::Button(helper::checkIssueButtonName)) bCheckButton.data = true;
+            auto index{0};
 
-            ImGui::Combo("Выпадающий список", &selected_item, items, IM_ARRAYSIZE(items));  // Выпадающий список
-
-            if (ImGui::Button("Кнопка 1"))  // Первая кнопка
+            for (const auto& issue : issues)  // Цикл для создания 10 строк
             {
-                // Обработчик для кнопки 1
-            }
-            ImGui::SameLine();  // Размещаем следующую кнопку в одной линии
 
-            if (ImGui::Button("Кнопка 2"))  // Вторая кнопка
-            {
-                // Обработчик для кнопки 2
+                ImGui::Text("ID: %s", issue.id.c_str());                                       // Выводим ID
+                ImGui::Text("Описание: Краткое описание элемента %s", issue.subject.c_str());  // Выводим описание
+
+                const auto labelCombo{"Задача:" + issue.id + "--" + items[selected_items[index]]};
+                ImGui::Combo(labelCombo.c_str(), &selected_items[index], items, IM_ARRAYSIZE(items));  // Выпадающий список
+
+                const auto labelButton1{"КнопкаA" + std::to_string(index)};
+                if (ImGui::Button(labelButton1.c_str()))  // Первая кнопка
+                {
+                    // Обработчик для кнопки 1
+                }
+                ImGui::SameLine();  // Размещаем следующую кнопку в одной линии
+
+                const auto labelButton2{"КнопкаB" + std::to_string(index)};
+                if (ImGui::Button(labelButton2.c_str()))  // Вторая кнопка
+                {
+                    // Обработчик для кнопки 2
+                }
+                ImGui::Separator();  // Добавляем разделитель между строками
+                ++index;
             }
-            ImGui::Separator();  // Добавляем разделитель между строками
         }
-
         ImGui::End();
     }
 }

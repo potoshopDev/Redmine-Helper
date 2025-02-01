@@ -3,7 +3,6 @@
 #include <cpr/cpr.h>
 #include <optional>
 #include <string>
-#include <format>
 #include <string_view>
 #include <nlohmann/json.hpp>
 #include <print>
@@ -49,15 +48,19 @@ constexpr const char* issues{"issues"};
 constexpr const char* relations{"relations"};
 constexpr const char* project_id{"project_id"};
 constexpr const char* project{"project"};
+constexpr const char* name{"name"};
 constexpr const char* subject{"subject"};
 constexpr const char* description{"description"};
+constexpr const char* fixed_version{"fixed_version"};
 constexpr const char* tracker{"tracker"};
 constexpr const char* tracker_id{"tracker_id"};
+constexpr const char* assigned_to{"assigned_to"};
 constexpr const char* status{"status"};
 constexpr const char* status_id{"status_id"};
 constexpr const char* priority{"priority"};
 constexpr const char* priority_id{"priority_id"};
 constexpr const char* id{"id"};
+constexpr const char* author{"author"};
 constexpr const char* targetIssueStatusOpen{"1"};
 
 constexpr const char* attachments{"attachments"};

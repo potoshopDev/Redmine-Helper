@@ -3,6 +3,9 @@
 #include <thread>
 #include <chrono>
 
+#include <thread>
+#include <utility>
+
 namespace helper
 {
 
@@ -64,18 +67,17 @@ helper::issues_vec filter_issues(const helper::issue_filters& filters)
         if (filters.is_any_relations)
             if (relationsData[helper::relations].is_array() && !relationsData[helper::relations].empty()) continue;
 
-        helper::issueData tmpData{
-            .id = issueId,
-            .subject = issue.contains(helper::subject)?issue[helper::subject]:"",
-            .description = issue.contains(helper::description)?issue[helper::description]:"",
-            .project = issue.contains(helper::project)?issue[helper::project][helper::name]: "",
-            .status1 = issue.contains(helper::status)?issue[helper::status][helper::name]: "",
-            .tracker = issue.contains(helper::tracker)?issue[helper::tracker][helper::name]:"",
-            .priority = issue.contains(helper::priority)?issue[helper::priority][helper::name]: "",
-            .author = issue.contains(helper::author)?issue[helper::author][helper::name]: "",
-            .assigned_to = issue.contains(helper::assigned_to) ? issue[helper::assigned_to][helper::name]: "" ,
-            .category = issue.contains(helper::category) ?issue[helper::category][helper::name]: "" ,
-            .fixed_version = issue.contains(helper::fixed_version)?issue[helper::fixed_version][helper::name]:""};
+        helper::issueData tmpData{.id = issueId,
+            .subject = issue.contains(helper::subject) ? issue[helper::subject] : "",
+            .description = issue.contains(helper::description) ? issue[helper::description] : "",
+            .project = issue.contains(helper::project) ? issue[helper::project][helper::name] : "",
+            .status = issue.contains(helper::status) ? issue[helper::status][helper::name] : "",
+            .tracker = issue.contains(helper::tracker) ? issue[helper::tracker][helper::name] : "",
+            .priority = issue.contains(helper::priority) ? issue[helper::priority][helper::name] : "",
+            .author = issue.contains(helper::author) ? issue[helper::author][helper::name] : "",
+            .assigned_to = issue.contains(helper::assigned_to) ? issue[helper::assigned_to][helper::name] : "",
+            .category = issue.contains(helper::category) ? issue[helper::category][helper::name] : "",
+            .fixed_version = issue.contains(helper::fixed_version) ? issue[helper::fixed_version][helper::name] : ""};
 
         return_issues.emplace_back(tmpData);
     }
@@ -167,8 +169,125 @@ void Run()
             std::println(msg_hlp::couldnt_find_new_issues);
         else
             push_to_working_issue(issues_arr);
-
         std::this_thread::sleep_for(helper::sleep_five_minutes);
     }
+}
+// Остановка процесса Run и ожидание Update (вспомогательная функция)
+void IssueHandler::stopAndWait()
+{
+    Stop();  // Останавливаем поток Run
+    while (isRunning.load())
+    {
+        std::this_thread::yield();  // Ждем завершения Update
+    }
+}
+
+// Метод Update (переименованный из Run)
+void IssueHandler::Update(const helper::issue_filters& filters)
+{
+    if (isRunning.exchange(true)) return;  // Если уже выполняется, выйти
+    cur_fil = filters;
+
+    auto& r = _ret_val;
+
+    std::thread(
+        [this, &r, filters]()
+        {
+            helper::issues_vec tmp{};
+            tmp = filter_issues(filters);  // Выполняем фильтрацию данных
+            std::swap(r, tmp);
+            isReady = true;
+            isRunning = false;  // Сбрасываем флаг после завершения
+        })
+        .detach();
+}
+
+// Запуск цикла Run
+void IssueHandler::Run(const helper::issue_filters& filters)
+{
+    if (!isStopped.exchange(false)) return;  // Если уже запущено, выходим
+    cur_fil = filters;                       // Сохраняем фильтры
+
+    updateThread = std::thread(
+        [this, filters]()
+        {
+            while (!isStopped.load())
+            {
+                Update(filters);                                        // Запускаем процесс обновления
+                std::this_thread::sleep_for(std::chrono::seconds(10));  // Ждем 5 минут
+            }
+        });
+}
+
+// Остановка процесса Run
+void IssueHandler::Stop()
+{
+    if (!isStopped.exchange(true))
+    {  // Если процесс еще идет
+        if (updateThread.joinable())
+        {
+            updateThread.join();  // Ожидаем завершения потока
+        }
+    }
+}
+
+// Перезапуск процесса Run
+void IssueHandler::Restart(const helper::issue_filters& filters)
+{
+    Stop();
+    Run(filters);
+}
+
+// Конструктор по умолчанию
+IssueHandler::IssueHandler() = default;
+
+// Деструктор
+IssueHandler::~IssueHandler()
+{
+    if (updateThread.joinable())
+    {
+        updateThread.detach();  // Дожидаемся завершения потока, если он еще работает
+    }
+}
+
+// Конструктор копирования
+IssueHandler::IssueHandler(const IssueHandler& other) : isReady(other.isReady), cur_fil(other.cur_fil)
+{
+    if (!other.isStopped) Run(cur_fil);
+}
+
+// Конструктор перемещения
+IssueHandler::IssueHandler(IssueHandler&& other) noexcept
+    : isRunning(other.isRunning.load()), isStopped(other.isStopped.load()), _ret_val(std::move(other._ret_val)), isReady(other.isReady)
+{
+    // Останавливаем процесс обновления и поток оригинала
+    other.stopAndWait();
+
+    if (!isStopped)
+    {  // Если Run был запущен, перезапускаем в новом объекте
+        Run(cur_fil);
+        other.isStopped = true;  // Указываем, что Run в оригинале остановлен
+    }
+}
+
+bool IssueHandler::is_running() const
+{
+    return isRunning.load();
+}
+
+bool IssueHandler::is_ready() const
+{
+    return isReady;
+}
+
+void IssueHandler::swap(helper::issues_vec& ivec)
+{
+    if (isReady && isRunning.exchange(true)) return;
+
+    std::swap(ivec, _ret_val);
+
+    _ret_val.clear();
+    isReady = false;
+    isRunning = false;
 }
 }  // namespace helper

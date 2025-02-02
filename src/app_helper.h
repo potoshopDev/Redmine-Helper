@@ -3,6 +3,7 @@
 #include <vector>
 #include <string_view>
 #include "resp_helper.h"
+#include <atomic>
 
 namespace helper
 {
@@ -13,7 +14,7 @@ struct issueData
     std::string subject{};
     std::string description{};
     std::string project{};
-    std::string status1{};
+    std::string status{};
     std::string tracker{};
     std::string priority{};
     std::string author{};
@@ -39,7 +40,37 @@ struct issue_filters
 };
 
 helper::issues_array find_issues(const helper::issue_filters& filters);
-helper::issues_vec filter_issues(const helper::issue_filters& filters);
+
+class IssueHandler
+{
+    std::atomic<bool> isRunning{false};  // Флаг состояния процесса Update
+    std::atomic<bool> isStopped{true};   // Флаг остановки Run
+    issues_vec _ret_val{};
+    bool isReady{false};
+    std::thread updateThread;  // Поток для выполнения Update
+    helper::issue_filters cur_fil{};
+
+    void Update(const helper::issue_filters& filters);
+
+public:
+    void Run(const helper::issue_filters& filters);      // Запускает Update каждые 5 минут
+    void Stop();                                         // Останавливает выполнение Run (цикл)
+    void Restart(const helper::issue_filters& filters);  // Перезапускает процесс
+    void swap(helper::issues_vec& ivec);
+    bool is_running() const;
+    bool is_ready() const;
+    void stopAndWait();  // Вспомогательная функция для остановки Run и ожидания завершения Update
+
+    // Конструкторы и операторы
+    IssueHandler();
+    ~IssueHandler();
+
+    IssueHandler(const IssueHandler& other);
+    IssueHandler(IssueHandler&& other) noexcept;
+    IssueHandler& operator=(const IssueHandler& other) = delete;
+    IssueHandler& operator=(IssueHandler&& other) = delete;
+};
+
 void Run();
 
 template <typename T>

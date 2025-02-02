@@ -164,7 +164,7 @@ int RunUI()
     const auto hwnd{GetHWND(window.get())};
     auto DirectXDevice{GraphicsDevice(hwnd)};
 
-    if (!DirectXDevice.is_Ready()) return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIREXTX);
+    if (!DirectXDevice.is_Ready()) return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIRECTX);
 
     SetupImGui(*window, DirectXDevice);
 
@@ -176,13 +176,15 @@ int RunUI()
     helper::WindowData windowData{helper::LoadFromFile(helper::nameFileSave)};
 
     helper::WindowsApp winApp{};
-    helper::SettingsWindow sw{windowData, helper::titleSettingsWindow};
-    helper::MainWindow mw{windowData, helper::titleMainWindow};
-    helper::IssueWindow iw{windowData, helper::titleIssueWindow};
+    {
+        helper::SettingsWindow sw{windowData, helper::titleSettingsWindow};
+        helper::MainWindow mw{windowData, helper::titleMainWindow};
+        helper::IssueWindow iw{windowData, helper::titleIssueWindow};
 
-    winApp.emplace_back(sw);
-    winApp.emplace_back(mw);
-    winApp.emplace_back(iw);
+        winApp.emplace_back(sw);
+        winApp.emplace_back(mw);
+        winApp.emplace_back(iw);
+    }
 
     while (!done)
     {

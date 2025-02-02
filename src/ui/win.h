@@ -3,7 +3,6 @@
 #include "windata.h"
 #include "app_helper.h"
 #include "resp_helper.h"
-#include <vector>
 
 namespace helper
 {
@@ -14,7 +13,7 @@ constexpr const char* titleMainWindow{"Главное окно"};
 constexpr const char* titleSettingsWindow{"Настройки"};
 constexpr const char* titleIssueWindow{"Задачи"};
 constexpr const char* saveButtonName{"Сохранить"};
-constexpr const char* checkIssueButtonName{"Проверить задачи"};
+constexpr const char* checkIssueButtonName{"Запустить поиск задач"};
 
 class SimpleWindow final : public helper::WindowFront
 {
@@ -48,6 +47,11 @@ public:
     virtual void Run() noexcept override;
 };
 
+const helper::issue_filters test_filters{
+    .issue = {{helper::project_id, helper::projectKsup}, {helper::status_id, helper::status_inprogress}},
+    .relations = {},
+    .is_any_relations = true,
+};
 class IssueWindow final : public helper::WindowFront
 {
 protected:
@@ -56,16 +60,11 @@ protected:
     const std::string_view fCounter{"counter"};
     helper::issues_vec issues{};
 
-    const helper::issue_filters test_filters{
-        .issue = {{helper::project_id, helper::projectKsup}, {helper::status_id, helper::status_inprogress}},
-        .relations = {},
-        .is_any_relations = true,
-    };
-
 public:
     IssueWindow(WindowData& wd, const std::string_view title);
     virtual void DefaultSettings() noexcept override;
     virtual void Run() noexcept override;
+    helper::IssueHandler issueHadnler{};
 };
 
 }  // namespace helper

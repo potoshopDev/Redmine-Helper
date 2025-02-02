@@ -1,4 +1,6 @@
 #include "win.h"
+#include "app_helper.h"
+#include "resp_helper.h"
 #include "ui/win.h"
 #include <imgui.h>
 #include <string>
@@ -130,7 +132,7 @@ void helper::SettingsWindow ::Run() noexcept
 //////////////////////////////////////////////////
 /// IssueWindow
 //////////////////////////////////////////////////
-IssueWindow::IssueWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title), issues(helper::filter_issues(test_filters))
+IssueWindow::IssueWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
 {
     DefaultSettings();
 }
@@ -152,23 +154,47 @@ void IssueWindow::Run() noexcept
     auto bShowWindow{helper::madeAutoBool(_wd, ShowWinowName)};
     auto bCheckButton{helper::madeAutoBool(_wd, checkIssueButtonName)};
 
+    if (issueHadnler.is_ready()) issueHadnler.swap(issues);
+
     if (bShowWindow.data)
     {
         const char* items[] = {"Опция 1", "Опция 2"};
         static std::vector<int> selected_items(issues.size(), 0);
-        // if (selected_items.size() != issues.size()) selected_items.resize(issues.size());
+        if (issues.size() != selected_items.size()) selected_items.resize(issues.size());
 
         ImGui::Begin(_title.data(), &bShowWindow.data);
         {
 
-            if (ImGui::Button(helper::checkIssueButtonName)) bCheckButton.data = true;
+            if (ImGui::Button(helper::checkIssueButtonName))
+            {
+                bCheckButton.data = true;
+
+                const helper::issue_filters test_filters2{
+                    .issue = {{helper::project_id, helper::projectKsup}, {helper::status_id, helper::status_open}},
+                    .relations = {},
+                    .is_any_relations = false,
+                };
+                issueHadnler.Restart(test_filters);
+            }
+
+            if (issueHadnler.is_running())
+            {
+                ImGui::SameLine();  // Размещаем следующую кнопку в одной линии
+                ImGui::Text("Обновление задач ........");
+            }
+
             auto index{0};
 
             for (const auto& issue : issues)  // Цикл для создания 10 строк
             {
+                if (issue.priority == "Нормальный")
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.3f, 0.2f, 1.0f));
+                    ImGui::Text("Hello, world! ");
+                }
 
-                ImGui::Text("ID: %s", issue.id.c_str());                                       // Выводим ID
-                ImGui::Text("Описание: Краткое описание элемента %s", issue.subject.c_str());  // Выводим описание
+                ImGui::Text("ID: %s", issue.id.c_str());             // Выводим ID
+                ImGui::Text("Описание: %s", issue.subject.c_str());  // Выводим описание
 
                 const auto labelCombo{"Задача:" + issue.id + "--" + items[selected_items[index]]};
                 ImGui::Combo(labelCombo.c_str(), &selected_items[index], items, IM_ARRAYSIZE(items));  // Выпадающий список
@@ -184,6 +210,10 @@ void IssueWindow::Run() noexcept
                 if (ImGui::Button(labelButton2.c_str()))  // Вторая кнопка
                 {
                     // Обработчик для кнопки 2
+                }
+                if (issue.priority == "Нормальный")
+                {
+                    ImGui::PopStyleColor();
                 }
                 ImGui::Separator();  // Добавляем разделитель между строками
                 ++index;

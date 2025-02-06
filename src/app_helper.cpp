@@ -188,14 +188,13 @@ void IssueHandler::Update(const helper::issue_filters& filters)
     if (isRunning.exchange(true)) return;  // Если уже выполняется, выйти
     cur_fil = filters;
 
-    auto& r = _ret_val;
-
     std::thread(
-        [this, &r, filters]()
+        [this, filters]()
         {
-            helper::issues_vec tmp{};
-            tmp = filter_issues(filters);  // Выполняем фильтрацию данных
-            std::swap(r, tmp);
+            _ret_val.clear();
+            _ret_val.shrink_to_fit();
+            _ret_val = filter_issues(filters);  // Выполняем фильтрацию данных
+                                                //
             isReady = true;
             isRunning = false;  // Сбрасываем флаг после завершения
         })
@@ -287,6 +286,7 @@ void IssueHandler::swap(helper::issues_vec& ivec)
     std::swap(ivec, _ret_val);
 
     _ret_val.clear();
+    _ret_val.shrink_to_fit();
     isReady = false;
     isRunning = false;
 }

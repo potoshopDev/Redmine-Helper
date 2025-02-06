@@ -2,6 +2,8 @@
 #include "app_helper.h"
 #include "resp_helper.h"
 #include "ui/win.h"
+#include "ui/windata.h"
+#include <cstring>
 #include <imgui.h>
 #include <string>
 
@@ -109,22 +111,45 @@ void SettingsWindow::DefaultSettings() noexcept
 {
     const auto ShowWinowName{helper::getObjName(_title, _title)};
     const auto SaveButtonName{helper::getObjName(helper::saveButtonName, helper::saveButtonName)};
+    const auto inputIssueCountName{helper::getObjName(_title, helper::issueCountInput)};
+    const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
+    const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};
 
     helper::addBool(_wd, ShowWinowName, false);
     helper::addBool(_wd, SaveButtonName, false);
+    helper::addFloat(_wd, inputIssueCountName, 25.0f);
+    helper::addBool(_wd, RedmineIDWindowName, false);
+    helper::addBool(_wd, TelegramSettingsWindowName, false);
 }
 void helper::SettingsWindow ::Run() noexcept
 {
     const auto ShowWinowName{helper::getObjName(_title, _title)};
     const auto SaveButtonName{helper::getObjName(helper::saveButtonName, helper::saveButtonName)};
+    const auto inputIssueCountName{helper::getObjName(_title, helper::issueCountInput)};
+    const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
+    const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};
 
     auto bShowWindow{helper::madeAutoBool(_wd, ShowWinowName)};
     auto bSaveButton{helper::madeAutoBool(_wd, SaveButtonName)};
+    auto fIssueCount{helper::madeAutoFloat(_wd, inputIssueCountName)};
+    auto bShowWindowRedmineId{helper::madeAutoBool(_wd, RedmineIDWindowName)};
+    auto bShowWindowTelegram{helper::madeAutoBool(_wd, TelegramSettingsWindowName)};
 
     if (bShowWindow.data)
     {
         ImGui::Begin(_title.data(), &bShowWindow.data);
         if (ImGui::Button(helper::saveButtonName)) bSaveButton.data = true;
+
+        ImGui::Separator();
+        if (ImGui::Button(helper::RedmineIdButtonName)) bShowWindowRedmineId.data = true;
+
+        ImGui::SameLine();
+        if (ImGui::Button(helper::TelegramSettingsButtonName)) bShowWindowTelegram.data = true;
+        ImGui::Separator();
+
+        ImGui::SetNextItemWidth(100);
+        if (ImGui::InputFloat(helper::issueCountInput, &fIssueCount.data, 1.0f, 10.0f, "%.0f"))
+            fIssueCount.data <= .0f ? fIssueCount.data = 1.f : false;
 
         ImGui::End();
     }
@@ -170,11 +195,12 @@ void IssueWindow::Run() noexcept
                 bCheckButton.data = true;
 
                 const helper::issue_filters test_filters2{
-                    .issue = {{helper::project_id, helper::projectKsup}, {helper::status_id, helper::status_open}},
+                    .issue = {{helper::project_id, helper::projectKsup}, {helper::status_id, helper::status_open},
+                        {helper::project_id, "632"}, {helper::project_id, helper::projectKdev}},
                     .relations = {},
                     .is_any_relations = false,
                 };
-                issueHadnler.Restart(test_filters);
+                issueHadnler.Restart(test_filters2);
             }
 
             if (issueHadnler.is_running())
@@ -184,6 +210,8 @@ void IssueWindow::Run() noexcept
             }
 
             auto index{0};
+
+            ImGui::Separator();  // Добавляем разделитель между строками
 
             for (const auto& issue : issues)  // Цикл для создания 10 строк
             {
@@ -216,10 +244,112 @@ void IssueWindow::Run() noexcept
                     ImGui::PopStyleColor();
                 }
                 ImGui::Separator();  // Добавляем разделитель между строками
+                ImGui::Separator();  // Добавляем разделитель между строками
                 ++index;
             }
         }
         ImGui::End();
     }
 }
+//////////////////////////////////////////////////
+/// RedmineIDWindow
+//////////////////////////////////////////////////
+RedmineIDWindow::RedmineIDWindow(WindowData& wd, const std::string_view title) : WindowFront(wd)
+{
+    DefaultSettings();
+}
+void RedmineIDWindow::DefaultSettings() noexcept
+{
+
+    const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
+    helper::addBool(_wd, RedmineIDWindowName, false);
+}
+
+void RedmineIDWindow::Run() noexcept
+{
+    const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
+    auto bShowWindowRedmineId{helper::madeAutoBool(_wd, RedmineIDWindowName)};
+
+    if (bShowWindowRedmineId.data)
+    {
+
+        ImVec2 windowSize(600, 200);  // Задайте размеры окна
+
+        ImGui::SetNextWindowSize(windowSize);
+        ImGui::SetNextWindowFocus();
+
+        if (ImGui::Begin(helper::titleRedmineIdWindow, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))
+        {
+            ImGui::Text("Введите свой Redmine Api key");
+            ImGui::InputText(": Redmine key", buf, helper::bufSize);
+
+            if (ImGui::Button("Close"))
+            {
+                if (buf[0] != '\0')
+                {
+                    const auto RedmineKeyName{helper::getObjName(helper::RedmineIdKey, helper::RedmineIdKey)};
+                    helper::setString(_wd, RedmineKeyName, buf);
+                    std::memset(buf, '\0', sizeof(buf));
+                }
+                bShowWindowRedmineId.data = false;
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Внимание! Поле очищается для безопасности.\nНе нужно вводить Апи ключ каждый раз!");
+        ImGui::End();
+    }
+}
+//////////////////////////////////////////////////
+/// TelegramSettingWindow
+//////////////////////////////////////////////////
+TelegramSettingWindow::TelegramSettingWindow(WindowData& wd, const std::string_view title) : WindowFront(wd)
+{
+    DefaultSettings();
+}
+void TelegramSettingWindow::DefaultSettings() noexcept
+{
+    const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};
+    helper::addBool(_wd, TelegramSettingsWindowName, false);
+}
+void TelegramSettingWindow::Run() noexcept
+{
+
+    const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};
+    auto bShowWindowTelegramSettings{helper::madeAutoBool(_wd, TelegramSettingsWindowName)};
+
+    if (bShowWindowTelegramSettings.data)
+    {
+        ImVec2 windowSize(600, 200);  // Задайте размеры окна
+
+        ImGui::SetNextWindowSize(windowSize);
+        ImGui::SetNextWindowFocus();
+
+        if (ImGui::Begin(helper::titleTelegramSettingsWindow, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))
+        {
+            ImGui::InputText(": Telegram ID чата", buf, helper::bufSize);
+            ImGui::InputText(": Telegram ID пользователя", bufU, helper::bufSize);
+
+            if (ImGui::Button("Close"))
+            {
+                if (buf[0] != '\0' && bufU[0] != '\0')
+                {
+                    const auto TelegramKeyName{helper::getObjName(helper::TIdKey, helper::TIdKey)};
+                    const auto TelegramUserName{helper::getObjName(helper::TUserKey, helper::TUserKey)};
+
+                    helper::setString(_wd, TelegramKeyName, buf);
+                    helper::setString(_wd, TelegramUserName, bufU);
+                    std::memset(buf, '\0', sizeof(buf));
+                    std::memset(bufU, '\0', sizeof(bufU));
+                }
+                bShowWindowTelegramSettings.data = false;
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Внимание! Поля очищается для безопасности.\nНе нужно заполнять поля каждый раз!");
+        ImGui::End();
+    }
+}
 }  // namespace helper
+// namespace helper

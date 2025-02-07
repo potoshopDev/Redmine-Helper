@@ -114,10 +114,12 @@ void SettingsWindow::DefaultSettings() noexcept
     const auto inputIssueCountName{helper::getObjName(_title, helper::issueCountInput)};
     const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
     const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};
+    const auto updateTimerName{helper::getObjName(helper::updateTimer, helper::updateTimer)};
 
     helper::addBool(_wd, ShowWinowName, false);
     helper::addBool(_wd, SaveButtonName, false);
     helper::addFloat(_wd, inputIssueCountName, 25.0f);
+    helper::addFloat(_wd, updateTimerName, 5.0f);
     helper::addBool(_wd, RedmineIDWindowName, false);
     helper::addBool(_wd, TelegramSettingsWindowName, false);
 }
@@ -128,10 +130,12 @@ void helper::SettingsWindow ::Run() noexcept
     const auto inputIssueCountName{helper::getObjName(_title, helper::issueCountInput)};
     const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
     const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};
+    const auto updateTimerName{helper::getObjName(helper::updateTimer, helper::updateTimer)};
 
     auto bShowWindow{helper::madeAutoBool(_wd, ShowWinowName)};
     auto bSaveButton{helper::madeAutoBool(_wd, SaveButtonName)};
     auto fIssueCount{helper::madeAutoFloat(_wd, inputIssueCountName)};
+    auto fUpdateTimer{helper::madeAutoFloat(_wd, updateTimerName)};
     auto bShowWindowRedmineId{helper::madeAutoBool(_wd, RedmineIDWindowName)};
     auto bShowWindowTelegram{helper::madeAutoBool(_wd, TelegramSettingsWindowName)};
 
@@ -150,6 +154,10 @@ void helper::SettingsWindow ::Run() noexcept
         ImGui::SetNextItemWidth(100);
         if (ImGui::InputFloat(helper::issueCountInput, &fIssueCount.data, 1.0f, 10.0f, "%.0f"))
             fIssueCount.data <= .0f ? fIssueCount.data = 1.f : false;
+
+        ImGui::SetNextItemWidth(100);
+        if (ImGui::InputFloat(helper::updateTimer, &fUpdateTimer.data, 1.0f, 5.0f, "%.0f"))
+            fUpdateTimer.data <= .0f ? fUpdateTimer.data = 1.f : false;
 
         ImGui::End();
     }

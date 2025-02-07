@@ -23,6 +23,7 @@ constexpr const char* TIdKey{"Telegram ID"};
 constexpr const char* TUserKey{"Telegram USER"};
 constexpr const char* TelegramSettingsButtonName{"Настроить Telegram"};
 constexpr const char* checkIssueButtonName{"Запустить поиск задач"};
+constexpr const char* updateTimer{"Частота обновлений (мин)"};
 
 constexpr const char* issueCountInput{"Максимальное количество задач в запросе"};
 constexpr const size_t bufSize{512};

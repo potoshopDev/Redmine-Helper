@@ -151,7 +151,7 @@ void push_to_working_issue(const helper::issues_array& issues_arr)
     }
 }
 
-void Run()
+void Start()
 {
     if (!helper::check_response(helper::YANDEX_URL)) return;
     if (!helper::check_response(helper::REDMINE_URL)) return;
@@ -212,8 +212,15 @@ void IssueHandler::Run(const helper::issue_filters& filters)
         {
             while (!isStopped.load())
             {
-                Update(filters);                                        // Запускаем процесс обновления
-                std::this_thread::sleep_for(std::chrono::seconds(10));  // Ждем 5 минут
+                Update(filters);
+
+                auto time{10.f};
+                while (time > 0.f)
+                {
+                    if (isStopped.load()) break;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(340));
+                    time -= 0.34f;
+                }
             }
         });
 }

@@ -71,7 +71,7 @@ public:
     IssueHandler& operator=(IssueHandler&& other) = delete;
 };
 
-void Run();
+void Start();
 
 template <typename T>
 T print_err_response_find(cpr::Response& response, const std::string_view url)

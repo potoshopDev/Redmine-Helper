@@ -76,7 +76,8 @@ constexpr const char* application_octet{"application/octet-stream"};
 constexpr const char* status_open{"1"};
 constexpr const char* status_inprogress{"2"};
 constexpr const char* fixed_version_id{"fixed_version_id"};
-constexpr const char* sup{"5081"};
+//constexpr const char* sup{"5081"};
+constexpr const char* sup{"7242"};
 
 constexpr const char* value{"value"};
 constexpr const char* one{"1"};

@@ -27,6 +27,10 @@ void draw(WindowFront* window)
 {
     if (window) window->Run();
 }
+void DefaultSettings(WindowFront* window)
+{
+    if (window) window->DefaultSettings();
+}
 
 void draw(DemoWindowFront& window)
 {

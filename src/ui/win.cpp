@@ -12,10 +12,7 @@ namespace helper
 
 void ShowImGuiWindow(bool& bShowFlag);
 
-SimpleWindow::SimpleWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
-{
-    DefaultSettings();
-}
+SimpleWindow::SimpleWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title) {}
 
 void helper::SimpleWindow::DefaultSettings() noexcept
 {
@@ -59,10 +56,7 @@ void ShowImGuiWindow(bool& bShowFlag)
 //////////////////////////////////////////////////
 /// MainWindow
 //////////////////////////////////////////////////
-MainWindow::MainWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
-{
-    DefaultSettings();
-}
+MainWindow::MainWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title) {}
 
 void MainWindow::DefaultSettings() noexcept
 {
@@ -103,10 +97,7 @@ void MainWindow::Run() noexcept
 //////////////////////////////////////////////////
 /// SettingsWindow
 //////////////////////////////////////////////////
-SettingsWindow::SettingsWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
-{
-    DefaultSettings();
-}
+SettingsWindow::SettingsWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title) {}
 void SettingsWindow::DefaultSettings() noexcept
 {
     const auto ShowWinowName{helper::getObjName(_title, _title)};
@@ -165,10 +156,7 @@ void helper::SettingsWindow ::Run() noexcept
 //////////////////////////////////////////////////
 /// IssueWindow
 //////////////////////////////////////////////////
-IssueWindow::IssueWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title)
-{
-    DefaultSettings();
-}
+IssueWindow::IssueWindow(WindowData& wd, const std::string_view title) : WindowFront(wd, title) {}
 
 void IssueWindow::DefaultSettings() noexcept
 {
@@ -177,6 +165,8 @@ void IssueWindow::DefaultSettings() noexcept
 
     helper::addBool(_wd, ShowWinowName, false);
     helper::addBool(_wd, checkIssueButtonName, false);
+
+    issueHadnler.Run(test_filters);
 }
 
 void IssueWindow::Run() noexcept
@@ -262,10 +252,7 @@ void IssueWindow::Run() noexcept
 //////////////////////////////////////////////////
 /// RedmineIDWindow
 //////////////////////////////////////////////////
-RedmineIDWindow::RedmineIDWindow(WindowData& wd, const std::string_view title) : WindowFront(wd)
-{
-    DefaultSettings();
-}
+RedmineIDWindow::RedmineIDWindow(WindowData& wd, const std::string_view title) : WindowFront(wd) {}
 void RedmineIDWindow::DefaultSettings() noexcept
 {
 
@@ -311,10 +298,7 @@ void RedmineIDWindow::Run() noexcept
 //////////////////////////////////////////////////
 /// TelegramSettingWindow
 //////////////////////////////////////////////////
-TelegramSettingWindow::TelegramSettingWindow(WindowData& wd, const std::string_view title) : WindowFront(wd)
-{
-    DefaultSettings();
-}
+TelegramSettingWindow::TelegramSettingWindow(WindowData& wd, const std::string_view title) : WindowFront(wd) {}
 void TelegramSettingWindow::DefaultSettings() noexcept
 {
     const auto TelegramSettingsWindowName{helper::getObjName(helper::titleTelegramSettingsWindow, helper::titleTelegramSettingsWindow)};

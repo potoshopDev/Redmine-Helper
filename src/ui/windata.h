@@ -106,7 +106,7 @@ class autoUpdater final
 {
 public:
     T data;
-    autoUpdater(WindowData& wd, const std::string key) : _winData(wd), _key(key) {  data = _winData._self->_get<T>(_key); }
+    autoUpdater(WindowData& wd, const std::string key) : _winData(wd), _key(key) { data = _winData._self->_get<T>(_key); }
     void Save() noexcept { _winData._self->_set<T>(_key, data); };
     ~autoUpdater() { Save(); }
 
@@ -126,13 +126,13 @@ class WindowFront
 {
 protected:
     WindowData& _wd;
-    virtual void DefaultSettings() noexcept;
 
 public:
     WindowFront(WindowData& wd);
     WindowFront(WindowData& wd, const std::string_view title);
 
     virtual void Run() noexcept {};
+    virtual void DefaultSettings() noexcept;
     virtual ~WindowFront() = default;
     const std::string_view _title{"new window"};
 };
@@ -144,6 +144,7 @@ struct DemoWindowFront
 };
 
 void draw(WindowFront* window);
+void DefaultSettings(WindowFront* window);
 void draw(DemoWindowFront& window);
 
 }  // namespace helper

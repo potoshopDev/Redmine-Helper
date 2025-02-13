@@ -181,13 +181,15 @@ int RunUI()
         helper::MainWindow mw{windowData, helper::titleMainWindow};
         helper::IssueWindow iw{windowData, helper::titleIssueWindow};
         helper::RedmineIDWindow rw{windowData, helper::titleRedmineIdWindow};
-        helper::TelegramSettingWindow tw{windowData, helper::titleTelegramSettingsWindow};
+        helper::RedmineIDWindow tw{windowData, helper::titleTelegramSettingsWindow};
 
         winApp.emplace_back(sw);
         winApp.emplace_back(mw);
         winApp.emplace_back(iw);
         winApp.emplace_back(rw);
         winApp.emplace_back(tw);
+
+        helper::DefaultSettings(winApp);
     }
 
     while (!done)

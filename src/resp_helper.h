@@ -76,7 +76,7 @@ constexpr const char* application_octet{"application/octet-stream"};
 constexpr const char* status_open{"1"};
 constexpr const char* status_inprogress{"2"};
 constexpr const char* fixed_version_id{"fixed_version_id"};
-//constexpr const char* sup{"5081"};
+// constexpr const char* sup{"5081"};
 constexpr const char* sup{"7242"};
 
 constexpr const char* value{"value"};
@@ -93,6 +93,7 @@ constexpr const char* category{"category"};
 constexpr const char* User{"364"};
 constexpr const char* User2{"102"};
 constexpr const char* User3{"172"};
+constexpr const char* User4{"297"};
 constexpr const char* selling{"4578"};
 constexpr const char* projectKdev{"600"};
 constexpr const char* projectKsup{"446"};

@@ -286,7 +286,7 @@ nlohmann::json GetDevIssueData()
 
     const nlohmann::json request_body = {{issue, {
                                                      //{assigned_to_id, User2},
-                                                     {assigned_to_id, User3},
+                                                     {assigned_to_id, User4},
                                                      {custom_fields, customFields},
                                                      {status_id, status_open},
                                                  }}};

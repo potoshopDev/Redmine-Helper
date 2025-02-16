@@ -218,6 +218,7 @@ void IssueHandler::Run(const helper::issue_filters& filters)
                 while (time > 0.f)
                 {
                     if (isStopped.load()) break;
+
                     std::this_thread::sleep_for(std::chrono::milliseconds(340));
                     time -= 0.34f;
                 }
@@ -250,10 +251,7 @@ IssueHandler::IssueHandler() = default;
 // Деструктор
 IssueHandler::~IssueHandler()
 {
-    if (updateThread.joinable())
-    {
-        updateThread.detach();  // Дожидаемся завершения потока, если он еще работает
-    }
+    Stop();
 }
 
 // Конструктор копирования

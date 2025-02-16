@@ -15,7 +15,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/build/backends)
 
-set (SOURCES src/main.cpp)
+set (SOURCES src/main.cpp
+	src/json_helper.cpp
+	src/resp_helper.cpp
+	src/app_helper.cpp
+	)
 set (HEADER 
 	src/json_helper.h
 	src/resp_helper.h
@@ -25,7 +29,7 @@ set (HEADER
 source_group("Source files/Source" FILES ${SOURCES}) 
 source_group("Header files/Header" FILES ${HEADER})
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADER})
+add_executable(${PROJECT_NAME} ${SOURCES} )
 
 find_package(nlohmann_json REQUIRED)
 find_package(gtest REQUIRED)
@@ -60,6 +64,9 @@ set (SOURCESG
 	build/backends/imgui_impl_dx11.cpp
 	src/ui/windata.cpp
 	src/ui/win.cpp
+	src/json_helper.cpp
+	src/resp_helper.cpp
+	src/app_helper.cpp
 )
 set (HEADERG 
 	src/json_helper.h

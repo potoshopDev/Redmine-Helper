@@ -7,7 +7,7 @@ namespace ImGui
 {
 	enum class RETURN_CODE : int
 	{
-		NO_INITILIZE_DIREXTX = -100,
+		NO_INITILIZE_DIRECTX = -100,
 		NO_INITLIZED_SDL = -99,
 		SUCCESED = 0
 	};

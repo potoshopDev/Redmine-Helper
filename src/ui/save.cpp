@@ -1,4 +1,5 @@
 
+#include <format>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -8,6 +9,7 @@
 #include "windata.h"
 #include <fstream>
 #include <filesystem>
+#include <format>
 
 #include <windows.h>
 
@@ -15,6 +17,16 @@ namespace fs = std::filesystem;
 
 namespace helper
 {
+
+constexpr uint8_t ENCRYPTION_KEY = 0x7F;
+
+void xorEncryptDecrypt(char* data, size_t size, uint8_t key)
+{
+    for (size_t i = 0; i < size; ++i)
+    {
+        data[i] ^= key;
+    }
+}
 
 std::filesystem::path GetExePath()
 {
@@ -42,28 +54,34 @@ void SaveToFile(const helper::WindowData& data, const std::string& filename)
 
     for (const auto& [key, value] : data._self->data)
     {
+        std::string line{};
         // Сохраняем ключ
-        out << std::quoted(key) << " ";  // std::quoted позволяет сохранять ключи с пробелами
+        // out << std::quoted(key) << " ";  // std::quoted позволяет сохранять ключи с пробелами
+        line = std::format("\"{}\" ", key);
 
         if (std::holds_alternative<bool>(value))
         {
-            out << "bool " << std::get<bool>(value);
+            // out << "bool " << std::get<bool>(value);
+            line += std::format("bool {}", std::get<bool>(value) ? 1 : 0);
         }
         else if (std::holds_alternative<float>(value))
         {
-            out << "float " << std::get<float>(value);
+            // out << "float " << std::get<float>(value);
+            line += std::format("float {}", std::get<float>(value));
         }
         else if (std::holds_alternative<std::string>(value))
         {
-            out << "string " << std::quoted(std::get<std::string>(value));
+            // out << "string " << std::quoted(std::get<std::string>(value));
+            line += std::format("string \"{}\"", std::get<std::string>(value));
         }
 
-        out << "\n";
+        // out << "\n";
+        xorEncryptDecrypt(line.data(), line.size(), ENCRYPTION_KEY);
+        out << line << std::endl;
     }
 
     out.close();
 }
-
 WindowData LoadFromFile(const std::string& filename)
 {
     const auto fullPath{getFullPath(filename)};
@@ -79,6 +97,7 @@ WindowData LoadFromFile(const std::string& filename)
 
     while (std::getline(in, line))
     {
+        xorEncryptDecrypt(line.data(), line.size(), ENCRYPTION_KEY);
         std::istringstream iss(line);
         std::string key, type;
 
@@ -90,7 +109,7 @@ WindowData LoadFromFile(const std::string& filename)
 
         if (type == "bool")
         {
-            bool bool_value;
+            bool bool_value{};
             iss >> bool_value;
             helper::setBool(data, key, bool_value);
         }
@@ -117,39 +136,3 @@ WindowData LoadFromFile(const std::string& filename)
 }
 }  // namespace helper
 
-// int main() {
-//     UnorderedMap data = {
-//         {"key with space", true},
-//         {"float_key", 3.14f},
-//         {"string key", "Hello, World!"}
-//     };
-//
-//     // Сохраняем данные в файл
-//     try {
-//         SaveToFile(data, "save.dat");
-//         std::cout << "Данные успешно сохранены в файл.\n";
-//     } catch (const std::exception& e) {
-//         std::cerr << e.what() << std::endl;
-//     }
-//
-//     // Загружаем данные из файла
-//     try {
-//         UnorderedMap loaded_data = LoadFromFile("save.dat");
-//         std::cout << "Данные успешно загружены из файла:\n";
-//         for (const auto& [key, value] : loaded_data) {
-//             std::cout << key << ": ";
-//             if (std::holds_alternative<bool>(value)) {
-//                 std::cout << std::boolalpha << std::get<bool>(value);
-//             } else if (std::holds_alternative<float>(value)) {
-//                 std::cout << std::get<float>(value);
-//             } else if (std::holds_alternative<std::string>(value)) {
-//                 std::cout << std::get<std::string>(value);
-//             }
-//             std::cout << "\n";
-//         }
-//     } catch (const std::exception& e) {
-//         std::cerr << e.what() << std::endl;
-//     }
-//
-//     return 0;
-// }

@@ -18,7 +18,6 @@
 #include <iostream>
 #include <fstream>
 
-#include "save.h"
 #include "ui/windata.h"
 
 namespace
@@ -165,7 +164,7 @@ int RunUI()
     const auto hwnd{GetHWND(window.get())};
     auto DirectXDevice{GraphicsDevice(hwnd)};
 
-    if (!DirectXDevice.is_Ready()) return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIREXTX);
+    if (!DirectXDevice.is_Ready()) return std::to_underlying(RETURN_CODE::NO_INITILIZE_DIRECTX);
 
     SetupImGui(*window, DirectXDevice);
 
@@ -177,11 +176,21 @@ int RunUI()
     helper::WindowData windowData{helper::LoadFromFile(helper::nameFileSave)};
 
     helper::WindowsApp winApp{};
-    helper::SettingsWindow sw{windowData, helper::titleSettingsWindow};
-    helper::MainWindow mw{windowData, helper::titleMainWindow};
+    {
+        helper::SettingsWindow sw{windowData, helper::titleSettingsWindow};
+        helper::MainWindow mw{windowData, helper::titleMainWindow};
+        helper::IssueWindow iw{windowData, helper::titleIssueWindow};
+        helper::RedmineIDWindow rw{windowData, helper::titleRedmineIdWindow};
+        helper::RedmineIDWindow tw{windowData, helper::titleTelegramSettingsWindow};
 
-    winApp.emplace_back(sw);
-    winApp.emplace_back(mw);
+        winApp.emplace_back(sw);
+        winApp.emplace_back(mw);
+        winApp.emplace_back(iw);
+        winApp.emplace_back(rw);
+        winApp.emplace_back(tw);
+
+        helper::DefaultSettings(winApp);
+    }
 
     while (!done)
     {
@@ -353,7 +362,7 @@ auto InitializeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
 {
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     return std::unique_ptr<SDL_Window, decltype(&SDLClear)>(
-        SDL_CreateWindow("Redmine Helper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, window_flags), &SDLClear);
+        SDL_CreateWindow("Redmine Helper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960, window_flags), &SDLClear);
 }
 
 HWND GetHWND(SDL_Window* window)

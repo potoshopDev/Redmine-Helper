@@ -126,13 +126,13 @@ class WindowFront
 {
 protected:
     WindowData& _wd;
-    virtual void RegObjName() noexcept;
 
 public:
     WindowFront(WindowData& wd);
     WindowFront(WindowData& wd, const std::string_view title);
 
     virtual void Run() noexcept {};
+    virtual void DefaultSettings() noexcept;
     virtual ~WindowFront() = default;
     const std::string_view _title{"new window"};
 };
@@ -144,6 +144,7 @@ struct DemoWindowFront
 };
 
 void draw(WindowFront* window);
+void DefaultSettings(WindowFront* window);
 void draw(DemoWindowFront& window);
 
 }  // namespace helper

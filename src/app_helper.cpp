@@ -16,6 +16,7 @@ std::optional<cpr::Response> get_issue_relation(std::string_view issueId, std::s
 helper::issues_array find_issues(const helper::issue_filters& filters)
 {
     const auto key{helper::loadApiKey(helper::API_PATH)};
+
     if (helper::is_key_bad(key)) return {};
 
     const auto url{__get_url_find(filters)};
@@ -92,7 +93,7 @@ std::optional<cpr::Response> get_issue_relation(std::string_view issueId, std::s
 
     if (helper::is_status_code_nook(response))
     {
-        std::println("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє СЃРІСЏР·Р°РЅРЅС‹С… Р·Р°РґР°С‡ Сѓ {}, СЃС‚Р°С‚СѓСЃ РєРѕРґ: {}", issueId, response.status_code);
+        std::println("Не удалось получить список связанных задач у {}, статус код: {}", issueId, response.status_code);
         return std::nullopt;
     }
 
@@ -118,17 +119,17 @@ std::string formatting_msg_copy_issue(const std::string_view current_issue, cons
     if (helper::is_key_bad(key)) return {};
 
     const auto response{helper::GetIssue(new_issue.data())};
-    if (!response) return std::format("РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РЅР°Р·РІР°РЅРёСЏ Сѓ Р·Р°РґР°С‡Рё {}", new_issue);
+    if (!response) return std::format("Ошибка при получении названия у задачи {}", new_issue);
 
     const auto data{nlohmann::json::parse(response->text)};
     const auto subject{data[helper::issue][helper::subject]};
 
-    return std::format("Р СњР С•Р Р†Р В°РЎРЏ Р В·Р В°Р Т‘Р В°РЎвЂЎР В°: {}/issues/{} : {}", helper::REDMINE_URL, new_issue, subject.dump().c_str());
+    return std::format("РќРѕРІР°СЏ Р·Р°РґР°С‡Р°: {}/issues/{} : {}", helper::REDMINE_URL, new_issue, subject.dump().c_str());
 }
 
 void send_msg_copy_issue(const std::string_view current_issue, const std::string_view new_issue)
 {
-    std::println("РЎРєРѕРїРёСЂРѕРІР°Р» Р·Р°РґР°С‡Сѓ {} РІ {}", current_issue, new_issue);
+    std::println("Скопировал задачу {} в {}", current_issue, new_issue);
 
     const auto msg{formatting_msg_copy_issue(current_issue, new_issue)};
     helper::sendMessageToTelegram(msg);
@@ -153,6 +154,7 @@ void push_to_working_issue(const helper::issues_array& issues_arr)
 
 void Start()
 {
+
     if (!helper::check_response(helper::YANDEX_URL)) return;
     if (!helper::check_response(helper::REDMINE_URL)) return;
 
@@ -172,20 +174,20 @@ void Start()
         std::this_thread::sleep_for(helper::sleep_five_minutes);
     }
 }
-// РћСЃС‚Р°РЅРѕРІРєР° РїСЂРѕС†РµСЃСЃР° Run Рё РѕР¶РёРґР°РЅРёРµ Update (РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅР°СЏ С„СѓРЅРєС†РёСЏ)
+// Остановка процесса Run и ожидание Update (вспомогательная функция)
 void IssueHandler::stopAndWait()
 {
-    Stop();  // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїРѕС‚РѕРє Run
+    Stop();  // Останавливаем поток Run
     while (isRunning.load())
     {
-        std::this_thread::yield();  // Р–РґРµРј Р·Р°РІРµСЂС€РµРЅРёСЏ Update
+        std::this_thread::yield();  // Ждем завершения Update
     }
 }
 
-// РњРµС‚РѕРґ Update (РїРµСЂРµРёРјРµРЅРѕРІР°РЅРЅС‹Р№ РёР· Run)
+// Метод Update (переименованный из Run)
 void IssueHandler::Update(const helper::issue_filters& filters)
 {
-    if (isRunning.exchange(true)) return;  // Р•СЃР»Рё СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ, РІС‹Р№С‚Рё
+    if (isRunning.exchange(true)) return;  // Если уже выполняется, выйти
     cur_fil = filters;
 
     std::thread(
@@ -193,19 +195,19 @@ void IssueHandler::Update(const helper::issue_filters& filters)
         {
             _ret_val.clear();
             _ret_val.shrink_to_fit();
-            _ret_val = filter_issues(filters);  // Р’С‹РїРѕР»РЅСЏРµРј С„РёР»СЊС‚СЂР°С†РёСЋ РґР°РЅРЅС‹С…
+            _ret_val = filter_issues(filters);  // Выполняем фильтрацию данных
                                                 //
             isReady = true;
-            isRunning = false;  // РЎР±СЂР°СЃС‹РІР°РµРј С„Р»Р°Рі РїРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ
+            isRunning = false;  // Сбрасываем флаг после завершения
         })
         .detach();
 }
 
-// Р—Р°РїСѓСЃРє С†РёРєР»Р° Run
+// Запуск цикла Run
 void IssueHandler::Run(const helper::issue_filters& filters)
 {
-    if (!isStopped.exchange(false)) return;  // Р•СЃР»Рё СѓР¶Рµ Р·Р°РїСѓС‰РµРЅРѕ, РІС‹С…РѕРґРёРј
-    cur_fil = filters;                       // РЎРѕС…СЂР°РЅСЏРµРј С„РёР»СЊС‚СЂС‹
+    if (!isStopped.exchange(false)) return;  // Если уже запущено, выходим
+    cur_fil = filters;                       // Сохраняем фильтры
 
     updateThread = std::thread(
         [this, filters]()
@@ -226,51 +228,51 @@ void IssueHandler::Run(const helper::issue_filters& filters)
         });
 }
 
-// РћСЃС‚Р°РЅРѕРІРєР° РїСЂРѕС†РµСЃСЃР° Run
+// Остановка процесса Run
 void IssueHandler::Stop()
 {
     if (!isStopped.exchange(true))
-    {  // Р•СЃР»Рё РїСЂРѕС†РµСЃСЃ РµС‰Рµ РёРґРµС‚
+    {  // Если процесс еще идет
         if (updateThread.joinable())
         {
-            updateThread.join();  // РћР¶РёРґР°РµРј Р·Р°РІРµСЂС€РµРЅРёСЏ РїРѕС‚РѕРєР°
+            updateThread.join();  // Ожидаем завершения потока
         }
     }
 }
 
-// РџРµСЂРµР·Р°РїСѓСЃРє РїСЂРѕС†РµСЃСЃР° Run
+// Перезапуск процесса Run
 void IssueHandler::Restart(const helper::issue_filters& filters)
 {
     Stop();
     Run(filters);
 }
 
-// РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+// Конструктор по умолчанию
 IssueHandler::IssueHandler() = default;
 
-// Р”РµСЃС‚СЂСѓРєС‚РѕСЂ
+// Деструктор
 IssueHandler::~IssueHandler()
 {
     Stop();
 }
 
-// РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РєРѕРїРёСЂРѕРІР°РЅРёСЏ
+// Конструктор копирования
 IssueHandler::IssueHandler(const IssueHandler& other) : isReady(other.isReady), cur_fil(other.cur_fil)
 {
     if (!other.isStopped) Run(cur_fil);
 }
 
-// РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РїРµСЂРµРјРµС‰РµРЅРёСЏ
+// Конструктор перемещения
 IssueHandler::IssueHandler(IssueHandler&& other) noexcept
     : isRunning(other.isRunning.load()), isStopped(other.isStopped.load()), _ret_val(std::move(other._ret_val)), isReady(other.isReady)
 {
-    // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂРѕС†РµСЃСЃ РѕР±РЅРѕРІР»РµРЅРёСЏ Рё РїРѕС‚РѕРє РѕСЂРёРіРёРЅР°Р»Р°
+    // Останавливаем процесс обновления и поток оригинала
     other.stopAndWait();
 
     if (!isStopped)
-    {  // Р•СЃР»Рё Run Р±С‹Р» Р·Р°РїСѓС‰РµРЅ, РїРµСЂРµР·Р°РїСѓСЃРєР°РµРј РІ РЅРѕРІРѕРј РѕР±СЉРµРєС‚Рµ
+    {  // Если Run был запущен, перезапускаем в новом объекте
         Run(cur_fil);
-        other.isStopped = true;  // РЈРєР°Р·С‹РІР°РµРј, С‡С‚Рѕ Run РІ РѕСЂРёРіРёРЅР°Р»Рµ РѕСЃС‚Р°РЅРѕРІР»РµРЅ
+        other.isStopped = true;  // Указываем, что Run в оригинале остановлен
     }
 }
 

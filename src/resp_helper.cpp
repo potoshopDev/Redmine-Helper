@@ -59,7 +59,7 @@ bool print_err_upload_file(const cpr::Response& uploadResponse)
 
 bool print_err_associate_file(const cpr::Response& associateFileResponse)
 {
-    const auto msg{std::format("РћС€РёР±РєР° Р°СЃСЃРѕС†РёР°С†РёРё С„Р°Р№Р»Р° СЃ Р·Р°РґР°С‡РµР№: {}", associateFileResponse.status_code)};
+    const auto msg{std::format("Ошибка ассоциации файла с задачей: {}", associateFileResponse.status_code)};
     std::println("{}", msg);
     helper::sendMessageToTelegram(msg);
 
@@ -174,7 +174,7 @@ void sendMessageToTelegram(const std::string_view message)
     }
     catch (const TgBot::TgException& e)
     {
-        std::cerr << "РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ: " << e.what() << std::endl;
+        std::cerr << "Ошибка отправки сообщения: " << e.what() << std::endl;
     }
 }
 std::optional<std::string> loadApiKey(const std::string& filePath)
@@ -182,7 +182,7 @@ std::optional<std::string> loadApiKey(const std::string& filePath)
     std::ifstream file(filePath);
     if (!file.is_open())
     {
-        std::println("РќРµ СѓРґР°Р»РѕСЃСЊ РЅР°Р№С‚Рё С„Р°Р№Р» {}", filePath);
+        std::println("Не удалось найти файл {}", filePath);
         return std::nullopt;
     }
 
@@ -194,7 +194,7 @@ std::optional<std::string> loadApiKey(const std::string& filePath)
     }
     else
     {
-        std::println("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕС‡РёС‚Р°С‚СЊ РђРїРё РєР»СЋС‡ РёР· С„Р°Р№Р»Р°: {}", filePath);
+        std::println("Не удалось прочитать Апи ключ из файла: {}", filePath);
         file.close();
         return std::nullopt;
     }
@@ -332,13 +332,13 @@ std::optional<std::string> copy(const std::string_view issue_id)
 }
 bool check_response(std::string_view URL)
 {
-    std::print("РџСЂРѕРІРµСЂСЏСЋ Р·Р°РїСЂРѕСЃ {}...", URL);
+    std::print("Проверяю запрос {}...", URL);
     cpr::Response response = cpr::Get(cpr::Url{URL}, cpr::VerifySsl{false});
     if (is_status_code_ok(response))
         std::println("OK");
     else
     {
-        std::println("РћС€РёР±РєР°. status code: {};", response.status_code);
+        std::println("Ошибка. status code: {};", response.status_code);
         return false;
     }
 
@@ -349,7 +349,7 @@ opt_tel_key loadTelegramKey(const std::string& filePath)
     std::ifstream file(filePath);
     if (!file.is_open())
     {
-        std::println("РќРµ СѓРґР°Р»РѕСЃСЊ РЅР°Р№С‚Рё С„Р°Р№Р» {}", filePath);
+        std::println("Не удалось найти файл {}", filePath);
         return std::nullopt;
     }
 
@@ -363,7 +363,7 @@ opt_tel_key loadTelegramKey(const std::string& filePath)
     }
     else
     {
-        std::println("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕС‡РёС‚Р°С‚СЊ РђРїРё РєР»СЋС‡ РёР· С„Р°Р№Р»Р°: {}", filePath);
+        std::println("Не удалось прочитать Апи ключ из файла: {}", filePath);
         file.close();
         return std::nullopt;
     }

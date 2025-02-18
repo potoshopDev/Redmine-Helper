@@ -46,25 +46,25 @@ helper::issues_array find_issues(const helper::issue_filters& filters);
 
 class IssueHandler
 {
-    std::atomic<bool> isRunning{false};  // Р¤Р»Р°Рі СЃРѕСЃС‚РѕСЏРЅРёСЏ РїСЂРѕС†РµСЃСЃР° Update
-    std::atomic<bool> isStopped{true};   // Р¤Р»Р°Рі РѕСЃС‚Р°РЅРѕРІРєРё Run
+    std::atomic<bool> isRunning{false};  // Флаг состояния процесса Update
+    std::atomic<bool> isStopped{true};   // Флаг остановки Run
     issues_vec _ret_val{};
     bool isReady{false};
-    std::thread updateThread;  // РџРѕС‚РѕРє РґР»СЏ РІС‹РїРѕР»РЅРµРЅРёСЏ Update
+    std::thread updateThread;  // Поток для выполнения Update
     helper::issue_filters cur_fil{};
 
     void Update(const helper::issue_filters& filters);
 
 public:
-    void Run(const helper::issue_filters& filters);      // Р—Р°РїСѓСЃРєР°РµС‚ Update РєР°Р¶РґС‹Рµ 5 РјРёРЅСѓС‚
-    void Stop();                                         // РћСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РІС‹РїРѕР»РЅРµРЅРёРµ Run (С†РёРєР»)
-    void Restart(const helper::issue_filters& filters);  // РџРµСЂРµР·Р°РїСѓСЃРєР°РµС‚ РїСЂРѕС†РµСЃСЃ
+    void Run(const helper::issue_filters& filters);      // Запускает Update каждые 5 минут
+    void Stop();                                         // Останавливает выполнение Run (цикл)
+    void Restart(const helper::issue_filters& filters);  // Перезапускает процесс
     void swap(helper::issues_vec& ivec);
     bool is_running() const;
     bool is_ready() const;
-    void stopAndWait();  // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅР°СЏ С„СѓРЅРєС†РёСЏ РґР»СЏ РѕСЃС‚Р°РЅРѕРІРєРё Run Рё РѕР¶РёРґР°РЅРёСЏ Р·Р°РІРµСЂС€РµРЅРёСЏ Update
+    void stopAndWait();  // Вспомогательная функция для остановки Run и ожидания завершения Update
 
-    // РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂС‹ Рё РѕРїРµСЂР°С‚РѕСЂС‹
+    // Конструкторы и операторы
     IssueHandler();
     ~IssueHandler();
 
@@ -73,7 +73,6 @@ public:
     IssueHandler& operator=(const IssueHandler& other) = delete;
     IssueHandler& operator=(IssueHandler&& other) = delete;
 };
-
 
 template <typename T>
 T print_err_response_find(cpr::Response& response, const std::string_view url)

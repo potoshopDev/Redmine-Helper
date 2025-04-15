@@ -142,13 +142,13 @@ void push_to_working_issue(const helper::issues_array& issues_arr)
         const auto issueDataSup{helper::GetSupIssueData()};
         helper::UpdateIssue(current_issue, issueDataSup);
 
-        const auto newTaskId{helper::copy(current_issue)};
-        if (!newTaskId) continue;
+        // const auto newTaskId{helper::copy(current_issue)};
+        // if (!newTaskId) continue;
 
-        const auto issueDataDev{helper::GetDevIssueData()};
-        helper::UpdateIssue(*newTaskId, issueDataDev);
+        // const auto issueDataDev{helper::GetDevIssueData()};
+        // helper::UpdateIssue(*newTaskId, issueDataDev);
 
-        send_msg_copy_issue(current_issue, *newTaskId);
+        // send_msg_copy_issue(current_issue, *newTaskId);
     }
 }
 
@@ -164,13 +164,16 @@ void Start()
         .is_any_relations = true,
     };
 
+    helper::issues_array test{};
+    test.emplace_back("204300");
+
     while (true)
     {
         const auto issues_arr{find_issues(csp_filters)};
         if (issues_arr.empty())
             std::println(msg_hlp::couldnt_find_new_issues);
         else
-            push_to_working_issue(issues_arr);
+            push_to_working_issue(test);
         std::this_thread::sleep_for(helper::sleep_five_minutes);
     }
 }

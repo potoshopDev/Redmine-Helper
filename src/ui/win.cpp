@@ -3,6 +3,7 @@
 #include "resp_helper.h"
 #include "ui/win.h"
 #include "ui/windata.h"
+#include "ui/save.h"
 #include <cstring>
 #include <imgui.h>
 #include <string>
@@ -114,6 +115,7 @@ void SettingsWindow::DefaultSettings() noexcept
     helper::addBool(_wd, RedmineIDWindowName, false);
     helper::addBool(_wd, TelegramSettingsWindowName, false);
 }
+
 void helper::SettingsWindow ::Run() noexcept
 {
     const auto ShowWinowName{helper::getObjName(_title, _title)};
@@ -149,6 +151,11 @@ void helper::SettingsWindow ::Run() noexcept
         ImGui::SetNextItemWidth(100);
         if (ImGui::InputFloat(helper::updateTimer, &fUpdateTimer.data, 1.0f, 5.0f, "%.0f"))
             fUpdateTimer.data <= .0f ? fUpdateTimer.data = 1.f : false;
+
+#ifndef __ADMIN_MODE
+        if (ImGui::Button("Выгрузить save.data")) helper::SaveToFile(_wd, "tmp.data", false);
+        ImGui::Separator();
+#endif
 
         ImGui::End();
     }
@@ -255,11 +262,9 @@ void IssueWindow::Run() noexcept
 RedmineIDWindow::RedmineIDWindow(WindowData& wd, const std::string_view title) : WindowFront(wd) {}
 void RedmineIDWindow::DefaultSettings() noexcept
 {
-
     const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
     helper::addBool(_wd, RedmineIDWindowName, false);
 }
-
 void RedmineIDWindow::Run() noexcept
 {
     const auto RedmineIDWindowName{helper::getObjName(helper::titleRedmineIdWindow, helper::titleRedmineIdWindow)};
@@ -267,13 +272,11 @@ void RedmineIDWindow::Run() noexcept
 
     if (bShowWindowRedmineId.data)
     {
-
         ImVec2 windowSize(600, 200);  // Задайте размеры окна
-
         ImGui::SetNextWindowSize(windowSize);
-        ImGui::SetNextWindowFocus();
+        // ImGui::SetNextWindowFocus();
 
-        if (ImGui::Begin(helper::titleRedmineIdWindow, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))
+        ImGui::Begin(helper::titleRedmineIdWindow, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
         {
             ImGui::Text("Введите свой Redmine Api key");
             ImGui::InputText(": Redmine key", buf, helper::bufSize);
@@ -288,10 +291,9 @@ void RedmineIDWindow::Run() noexcept
                 }
                 bShowWindowRedmineId.data = false;
             }
+            ImGui::Separator();
+            ImGui::Text("Внимание! Поле очищается для безопасности.\nНе нужно вводить Апи ключ каждый раз!");
         }
-
-        ImGui::Separator();
-        ImGui::Text("Внимание! Поле очищается для безопасности.\nНе нужно вводить Апи ключ каждый раз!");
         ImGui::End();
     }
 }
@@ -317,7 +319,7 @@ void TelegramSettingWindow::Run() noexcept
         ImGui::SetNextWindowSize(windowSize);
         ImGui::SetNextWindowFocus();
 
-        if (ImGui::Begin(helper::titleTelegramSettingsWindow, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))
+        (ImGui::Begin(helper::titleTelegramSettingsWindow, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse));
         {
             ImGui::InputText(": Telegram ID чата", buf, helper::bufSize);
             ImGui::InputText(": Telegram ID пользователя", bufU, helper::bufSize);

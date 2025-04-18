@@ -42,7 +42,7 @@ fs::path getFullPath(const std::string& filename)
     return directory / filename;
 }
 
-void SaveToFile(const helper::WindowData& data, const std::string& filename)
+void SaveToFile(const helper::WindowData& data, const std::string& filename, bool encryption)
 {
     const auto fullPath{getFullPath(filename)};
 
@@ -76,7 +76,8 @@ void SaveToFile(const helper::WindowData& data, const std::string& filename)
         }
 
         // out << "\n";
-        xorEncryptDecrypt(line.data(), line.size(), ENCRYPTION_KEY);
+        if (encryption) xorEncryptDecrypt(line.data(), line.size(), ENCRYPTION_KEY);
+
         out << line << std::endl;
     }
 

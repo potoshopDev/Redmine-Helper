@@ -181,7 +181,7 @@ int RunUI()
         helper::MainWindow mw{windowData, helper::titleMainWindow};
         helper::IssueWindow iw{windowData, helper::titleIssueWindow};
         helper::RedmineIDWindow rw{windowData, helper::titleRedmineIdWindow};
-        helper::RedmineIDWindow tw{windowData, helper::titleTelegramSettingsWindow};
+        helper::TelegramSettingWindow tw{windowData, helper::titleTelegramSettingsWindow};
 
         winApp.emplace_back(sw);
         winApp.emplace_back(mw);
@@ -362,7 +362,7 @@ auto InitializeSDLWindow() -> std::unique_ptr<SDL_Window, decltype(&SDLClear)>
 {
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     return std::unique_ptr<SDL_Window, decltype(&SDLClear)>(
-        SDL_CreateWindow("Redmine Helper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960, window_flags), &SDLClear);
+        SDL_CreateWindow("Redmine Helper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 768, window_flags), &SDLClear);
 }
 
 HWND GetHWND(SDL_Window* window)

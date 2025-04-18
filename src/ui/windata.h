@@ -85,7 +85,7 @@ public:
     friend float getFloat(const WindowData& wd, const std::string& key) noexcept;
     friend std::string getString(const WindowData& wd, const std::string& key) noexcept;
     friend voidFunc getFunction(const WindowData& wd, const std::string& key) noexcept;
-    friend void SaveToFile(const helper::WindowData& data, const std::string& filename);
+    friend void SaveToFile(const helper::WindowData& data, const std::string& filename, bool encryption);
 
     template <AllowedType T>
     friend class autoUpdater;

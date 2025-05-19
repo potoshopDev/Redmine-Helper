@@ -1,5 +1,5 @@
 call cd build
-call cmake --build . --target RedmineHelper
+call cmake --build . --target RedmineHelper_ImGui
 call cd bin\Debug\
-call .\RedmineHelper.exe
+call .\RedmineHelper_ImGui.exe
 call cd ..\..\..
